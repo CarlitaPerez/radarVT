@@ -1,0 +1,955 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Radar VT AHAL</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: app shell — header con fuente de datos, pestañas, y un área de trabajo que en "Cerebro VT" se divide en banco de preguntas + chat */
+:root{
+  --bg:#F4F6F2; --surface:#FFFFFF; --sunk:#EBEFEA; --ink:#15201B; --muted:#58665F; --line:#D9E0DA;
+  --accent:#1C6A56; --accent-ink:#FFFFFF; --accent-soft:#DCEBE5;
+  --opp:#2C7A4B; --opp-soft:#DDEFE3; --threat:#A3243F; --threat-soft:#F6DFE4;
+  --signal:#A86B12; --signal-soft:#F7EAD2; --noise:#7F8984; --noise-soft:#E7EAE8;
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:10px;
+  --c1:#1C6A56; --c2:#A3243F; --c3:#A86B12; --c4:#3D5BA9; --c5:#7A4A9E; --c6:#2B8A96; --c7:#B4532A; --c8:#6B7A2A;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --c1:#53B596; --c2:#E46A82; --c3:#E2A54A; --c4:#7F9BE6; --c5:#B98BDB; --c6:#5CC3CF; --c7:#E68A60; --c8:#B3C25C }}
+:root[data-theme="dark"]{ --c1:#53B596; --c2:#E46A82; --c3:#E2A54A; --c4:#7F9BE6; --c5:#B98BDB; --c6:#5CC3CF; --c7:#E68A60; --c8:#B3C25C }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1513; --surface:#161F1C; --sunk:#1C2723; --ink:#E4EBE7; --muted:#97A59E; --line:#2A3631;
+  --accent:#53B596; --accent-ink:#0B1411; --accent-soft:#1D3830;
+  --opp:#62C087; --opp-soft:#1B3325; --threat:#E46A82; --threat-soft:#3A1D25;
+  --signal:#E2A54A; --signal-soft:#3A2C15; --noise:#87918C; --noise-soft:#242D2A; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1513; --surface:#161F1C; --sunk:#1C2723; --ink:#E4EBE7; --muted:#97A59E; --line:#2A3631;
+  --accent:#53B596; --accent-ink:#0B1411; --accent-soft:#1D3830;
+  --opp:#62C087; --opp-soft:#1B3325; --threat:#E46A82; --threat-soft:#3A1D25;
+  --signal:#E2A54A; --signal-soft:#3A2C15; --noise:#87918C; --noise-soft:#242D2A; color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+.mono{font-family:var(--f-mono);font-size:.86em;letter-spacing:-.01em}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+
+/* header */
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.top-in{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;padding-block:12px 0}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
+.brand h1{font-size:22px;font-weight:700}
+.brand .sub{color:var(--muted);font-size:13px}
+.src{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.src b{color:var(--ink);font-weight:500}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:500}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn:disabled{opacity:.5;cursor:default}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;width:100%}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{padding:10px 14px 11px;text-decoration:none;color:var(--muted);font-weight:500;font-size:14px;border-bottom:2px solid transparent;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs a:hover{color:var(--ink)}
+main{padding-block:22px 48px}
+section.view{display:flex;flex-direction:column;gap:20px}
+
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;white-space:nowrap;line-height:1.6}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.t-opp{background:var(--opp-soft);color:var(--opp)}
+.t-threat{background:var(--threat-soft);color:var(--threat)}
+.t-signal{background:var(--signal-soft);color:var(--signal)}
+.t-noise{background:var(--noise-soft);color:var(--noise)}
+.t-acc{background:var(--accent-soft);color:var(--accent)}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.kpi .v{font-family:var(--f-display);font-size:30px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:13px;color:var(--muted)}
+.callout{border:1px solid var(--line);border-left:4px solid var(--signal);background:var(--surface);border-radius:var(--r);padding:14px 18px;display:flex;flex-direction:column;gap:6px}
+.callout h3{font-size:16px}
+.callout p{margin:0;max-width:80ch;color:var(--muted)}
+.callout p b{color:var(--ink);font-weight:600}
+
+.row-head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:10px}
+.row-head h2{font-size:20px}
+.row-head p{margin:2px 0 0;color:var(--muted);font-size:14px;max-width:70ch}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* family cards */
+.fams{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.fam{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.fam-top{display:flex;align-items:flex-start;gap:12px}
+.score{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;background:conic-gradient(var(--c) calc(var(--s)*1%), var(--sunk) 0);position:relative}
+.score::after{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--surface)}
+.score span{position:relative;z-index:1}
+.fam h3{font-size:16.5px;line-height:1.3}
+.fam .holder{font-size:13px;color:var(--muted);margin-top:2px}
+.fam p{margin:0;font-size:14px}
+.kv{display:grid;grid-template-columns:92px 1fr;gap:4px 10px;font-size:13.5px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;min-width:0}
+.action{background:var(--sunk);border-radius:8px;padding:10px 12px;font-size:14px}
+.action b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:2px}
+.fam-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:auto}
+.doclink{border:none;background:none;padding:0;color:var(--accent);font-family:var(--f-mono);font-size:12.5px;text-decoration:underline;text-underline-offset:2px}
+.fam-ask{margin-left:auto}
+
+/* explorer */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters input[type=search],.filters select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 10px;font-size:14px;min-width:0}
+.filters input[type=search]{flex:1 1 240px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;background:var(--sunk);position:sticky;top:0;white-space:nowrap}
+th button{border:none;background:none;padding:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit}
+tbody tr.r{cursor:pointer}
+tbody tr.r:hover{background:var(--sunk)}
+tbody tr.r[aria-expanded="true"]{background:var(--accent-soft)}
+td.num{font-variant-numeric:tabular-nums;text-align:right}
+.ttl{min-width:260px;max-width:440px}
+.bar{display:inline-block;height:6px;border-radius:3px;background:var(--accent);vertical-align:middle;margin-right:6px}
+tr.detail td{background:var(--sunk);padding:16px 18px}
+.det{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px}
+.det p{margin:0 0 8px}
+.det h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.cpcs{display:flex;flex-wrap:wrap;gap:4px}
+.cpcs span{font-family:var(--f-mono);font-size:11.5px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+
+/* charts */
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;min-width:0}
+.card h3{font-size:15.5px;margin-bottom:2px}
+.card .note{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.hbars{display:flex;flex-direction:column;gap:7px}
+.hb{display:grid;grid-template-columns:minmax(90px,46%) 1fr 30px;gap:8px;align-items:center;font-size:13px}
+.hb .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .trk{height:12px;background:var(--sunk);border-radius:3px;overflow:hidden}
+.hb .fill{height:100%;border-radius:3px;background:var(--accent)}
+.hb .n{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+svg text{fill:var(--muted);font-family:var(--f-body)}
+
+/* map */
+.mapcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.map-h{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.map-h h3{font-size:16px}
+.map-h .spacer{flex:1}
+.map-h select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 8px;font-size:13px}
+.mapbox{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mapbox svg{display:block;width:100%;height:auto}
+.mapbox circle.pt{cursor:pointer;stroke:var(--surface);stroke-width:1.5;transition:opacity .15s}
+.mapbox circle.pt:hover,.mapbox circle.pt.sel{stroke:var(--ink);stroke-width:2.5}
+.mapbox circle.dim{opacity:.13}
+.mapbox text.fl{font-size:11.5px;font-weight:600;fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round;pointer-events:none}
+.maptip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.35;padding:7px 10px;border-radius:6px;max-width:280px;z-index:2}
+.maplegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+.maplegend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.map-note{font-size:12.5px;color:var(--muted);margin:0}
+.gx{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.gx input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 9px;font-size:13px;flex:1 1 260px;min-width:0}
+
+/* quality */
+.cov td:nth-child(3){font-variant-numeric:tabular-nums}
+.q{font-family:var(--f-mono);font-size:12px;color:var(--muted);word-break:break-word}
+.issues{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.issues li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+.issues li p{margin:0;font-size:14px;color:var(--muted)}
+.issues li h3{font-size:15px}
+pre.query{background:var(--sunk);border-radius:8px;padding:12px 14px;font-family:var(--f-mono);font-size:12.5px;white-space:pre-wrap;word-break:break-word;margin:0}
+
+/* chat */
+.brain{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:16px;align-items:start}
+.bank{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;max-height:calc(100vh - 170px);position:sticky;top:120px;min-width:0}
+.bank-h{padding:14px 14px 10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.bank-h h2{font-size:17px}
+.bank-h input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px;font-size:14px;width:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:1px}
+.d-si{background:var(--opp)} .d-parcial{background:var(--signal)} .d-no{background:var(--noise);opacity:.55}
+.bank-l{overflow-y:auto;padding:6px 6px 12px}
+details.blk{border-bottom:1px solid var(--line)}
+details.blk:last-child{border-bottom:none}
+details.blk summary{list-style:none;padding:10px 8px;cursor:pointer;display:flex;gap:8px;align-items:baseline;font-weight:600;font-size:14px}
+details.blk summary::-webkit-details-marker{display:none}
+details.blk summary::before{content:"▸";color:var(--muted);font-size:11px;transition:transform .15s}
+details.blk[open] summary::before{transform:rotate(90deg)}
+details.blk summary .c{margin-left:auto;font-weight:400;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sub{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 8px 2px}
+.qb{display:grid;grid-template-columns:30px 1fr;gap:6px;text-align:left;border:none;background:none;padding:7px 8px;border-radius:6px;font-size:13.5px;line-height:1.4;width:100%}
+.qb:hover{background:var(--sunk)}
+.qb .qn{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);padding-top:1px;white-space:nowrap}
+.chat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-height:560px;height:calc(100vh - 170px);min-width:0}
+.chat-h{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.chat-h h2{font-size:17px}
+.chat-h .s{font-size:12.5px;color:var(--muted)}
+.chat-h .spacer{flex:1}
+.msgs{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:min(760px,100%);min-width:0}
+.msg.u{align-self:flex-end;background:var(--accent);color:var(--accent-ink);padding:10px 14px;border-radius:14px 14px 4px 14px;white-space:pre-wrap}
+.msg.a{align-self:flex-start;font-size:14.5px}
+.msg.a .md>*:first-child{margin-top:0}
+.msg.a .md p{margin:0 0 10px}
+.msg.a .md h3,.msg.a .md h4{font-size:15.5px;margin:14px 0 6px}
+.msg.a .md ul,.msg.a .md ol{margin:0 0 10px;padding-left:22px}
+.msg.a .md li{margin-bottom:4px}
+.msg.a .md code{font-family:var(--f-mono);font-size:.85em;background:var(--sunk);padding:1px 4px;border-radius:4px}
+.msg.a .md .tw{overflow-x:auto;margin:0 0 10px}
+.msg.a .md table{font-size:13px;width:auto}
+.msg.a .md th{position:static}
+.msg .meta{font-size:12px;color:var(--muted);margin-top:4px}
+.thinking{color:var(--muted);font-style:italic}
+.welcome{color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:10px;max-width:640px}
+.welcome h3{color:var(--ink);font-size:17px}
+.starter{display:flex;flex-wrap:wrap;gap:6px}
+.composer{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.composer textarea{width:100%;resize:vertical;min-height:64px;max-height:220px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);font-size:14.5px}
+.comp-row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;color:var(--muted)}
+.comp-row label{display:flex;gap:6px;align-items:center}
+.comp-row .spacer{flex:1}
+.notice{background:var(--signal-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:13.5px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:13.5px;z-index:20}
+
+@media (max-width:860px){
+  .brain{grid-template-columns:1fr}
+  .bank{position:static;max-height:420px}
+  .chat{height:auto;min-height:520px}
+  .msgs{max-height:none;min-height:300px}
+  .det{grid-template-columns:1fr}
+  .src{margin-left:0}
+}
+@media (max-width:420px){ .kpi:last-child{grid-column:1/-1} .fams{grid-template-columns:1fr} .charts{grid-template-columns:1fr} .hb{grid-template-columns:minmax(80px,40%) 1fr 30px} }
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <h1>Radar VT · AHAL</h1>
+      <span class="sub">Vigilancia tecnológica para cosmética herbolaria mexicana</span>
+    </div>
+    <div class="src">
+      <span>Pesquisa: <b id="srcName"></b> · <span id="srcCount"></span></span>
+      <label class="btn" for="csvIn" style="cursor:pointer">Cargar otra pesquisa (CSV de Lens)</label>
+      <input id="csvIn" type="file" accept=".csv,text/csv" hidden>
+      <button class="btn" id="resetBtn" hidden>Volver a vigilancia-1</button>
+    </div>
+    <nav class="tabs" aria-label="Secciones">
+      <a href="#oportunidades" data-v="oportunidades">Oportunidades</a>
+      <a href="#explorador" data-v="explorador">Explorador de patentes</a>
+      <a href="#panorama" data-v="panorama">Panorama</a>
+      <a href="#calidad" data-v="calidad">Calidad de la pesquisa</a>
+      <a href="#cerebro" data-v="cerebro">Cerebro VT (chat)</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="view" id="v-oportunidades"></section>
+  <section class="view" id="v-explorador" hidden></section>
+  <section class="view" id="v-panorama" hidden></section>
+  <section class="view" id="v-calidad" hidden></section>
+  <section class="view" id="v-cerebro" hidden>
+    <div class="brain">
+      <aside class="bank" aria-label="Banco de preguntas">
+        <div class="bank-h">
+          <h2>Banco de preguntas</h2>
+          <input id="bankQ" type="search" placeholder="Buscar entre 129 preguntas…" aria-label="Buscar pregunta">
+          <div class="legend"><span><i class="dot d-si"></i>Responde con tu pesquisa</span><span><i class="dot d-parcial"></i>Parcial</span><span><i class="dot d-no"></i>Faltan datos</span></div>
+        </div>
+        <div class="bank-l" id="bankL"></div>
+      </aside>
+      <div class="chat">
+        <div class="chat-h">
+          <h2>Cerebro VT</h2>
+          <span class="s" id="ctxInfo"></span>
+          <span class="spacer"></span>
+          <button class="btn" id="clearChat">Nueva conversación</button>
+        </div>
+        <div class="msgs" id="msgs" aria-live="polite"></div>
+        <form class="composer" id="composer">
+          <div class="notice" id="noSample" hidden>El chat necesita abrirse dentro de Claude (claude.ai o la app) y que permitas que esta página use Claude. Mientras tanto puedes copiar la pregunta con todo el contexto y pegarla en una conversación.</div>
+          <textarea id="qIn" placeholder="Escribe una pregunta o elige una del banco…" aria-label="Pregunta"></textarea>
+          <div class="comp-row">
+            <label><input type="checkbox" id="tpl" checked> Agregar la plantilla verificable (cita, clasifica y propone acción)</label>
+            <span class="spacer"></span>
+            <button type="button" class="btn" id="copyCtx">Copiar con contexto</button>
+            <button type="button" class="btn" id="stopBtn" hidden>Detener</button>
+            <button type="submit" class="btn primary" id="sendBtn">Preguntar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const DATA = {"source": {"file": "vigilancia-1.csv", "base": "Lens.org", "rows": 35, "loaded": "2026-11-06", "junk": [{"row": 36, "text": "el color favorito del sobrino de superman es el rojo"}]}, "patents": [{"n": 1, "key": "US 2014/0377386 A1", "j": "US", "kind": "A1", "lens": "187-081-622-009-122", "url": "https://lens.org/187-081-622-009-122", "pub": "2014-12-25", "year": 2014, "app": "2014-06-16", "prio": "2013-06-19", "title": "PLANT-BASED INHIBITORS OF KETOHEXOKINASE FOR THE SUPPORT OF WEIGHT MANAGEMENT", "abs": "A composition for inhibiting ketohexokinase, for example, ketohexokinase-C (KHK-C) activity, may include a plant extract exhibiting at least IC50 (i.e., 50% KHK-C inhibition at a concentration in the range of from about 0.1 μg/mL to about 1000 μg/mL. The composition may be in a form suitable for oral ingestion. A method for inhibiting KHK-C activity in a subject may include administering a plant extract that exhibits at least 50% KHK-C inhibition at a concentration from about 0.1 μg/mL to about 1000 μg/mL. The administering may be done to treat or prevent at least one of sugar addiction, obesity, or metabolic syndrome. The administering may be done to provide a diminished craving in the subject from at least one member selected from the group consisting of craving of sugar, fructose, fructose-containing sugars, carbohydrates, and combinations thereof. The subject may be pre-diabetic, diabetic and or insulin resistant.", "applicants": ["RANA JATINDER", "RANDOLPH RUSSELL KEITH", "SCHOLTEN JEFFREY", "LE MYPHUONG THI", "JOHNSON RICHARD J", "LANASPA GARCIA MIGUEL ANGEL", "ACCESS BUSINESS GROUP INT LLC", "UNIV COLORADO"], "inventors": ["RANA JATINDER", "RANDOLPH RUSSELL KEITH", "SCHOLTEN JEFFREY", "LE MYPHUONG THI", "JOHNSON RICHARD J", "LANASPA GARCIA MIGUEL ANGEL"], "owners": ["ACCESS BUSINESS GROUP INTERNATIONAL LLC (2016-02-18)", "THE REGENTS OF THE UNIVERSITY OF COLORADO A BODY CORPORATE (2016-02-19)"], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 0, "cites": 7, "famSize": 10, "famJ": ["KR", "RU", "CN", "HK", "TW", "AU", "EP", "JP", "WO", "US"], "famIds": ["122-252-964-894-235", "138-518-449-184-606", "166-859-183-337-417", "103-697-272-269-781", "185-003-606-990-567", "168-380-349-685-314", "089-009-203-972-150", "024-237-842-996-42X", "139-949-554-963-274", "187-081-622-009-122"], "cpc": ["A61K36/73", "A61K36/12", "A61K36/185", "A61K36/19", "A61K36/23", "A61K36/232", "A61K36/38", "A61K36/44", "A61K36/487", "A61K36/539", "A61K36/605", "A61K36/62", "A61K36/75", "A61P3/00", "A61P3/04", "A61P3/10", "A61P43/00"], "npl": 6, "fam": "F01"}, {"n": 2, "key": "WO 2014/204853 A1", "j": "WO", "kind": "A1", "lens": "139-949-554-963-274", "url": "https://lens.org/139-949-554-963-274", "pub": "2014-12-24", "year": 2014, "app": "2014-06-16", "prio": "2013-06-19", "title": "PLANT-BASED INHIBITORS OF KETOHEXOKINASE FOR THE SUPPORT OF WEIGHT MANAGEMENT", "abs": "A composition for inhibiting ketohexokinase, for example, ketohexokinase-C (KHK-C) activity, may include a plant extract exhibiting at least IC50 (i.e., 50% KHK-C inhibition at a concentration in the range of from about 0.1 μg/mL to about 1000 μg/mL. The composition may be in a form suitable for oral ingestion. A method for inhibiting KHK-C activity in a subject may include administering a plant extract that exhibits at least 50% KHK-C inhibition at a concentration from about 0.1 μg/mL to about 1000 μg/mL. The administering may be done to treat or prevent at least one of sugar addiction, obesity, or metabolic syndrome. The administering may be done to provide a diminished craving in the subject from at least one member selected from the group consisting of craving of sugar, fructose, fructose-containing sugars, carbohydrates, and combinations thereof. The subject may be pre-diabetic, diabetic and or insulin resistant.", "applicants": ["ACCESS BUSINESS GROUP INT LLC", "UNIV COLORADO"], "inventors": ["RANA JATINDER", "RANDOLPH RUSSELL KEITH", "SCHOLTEN JEFFREY", "LE MYPHUONG THI", "JOHNSON RICHARD J", "LANASPA GARCIA MIGUEL ANGEL"], "owners": [], "type": "Patent Application", "status": "PENDING", "citedBy": 0, "cites": 3, "famSize": 10, "famJ": ["KR", "RU", "CN", "HK", "TW", "AU", "EP", "JP", "WO", "US"], "famIds": ["122-252-964-894-235", "138-518-449-184-606", "166-859-183-337-417", "103-697-272-269-781", "185-003-606-990-567", "168-380-349-685-314", "089-009-203-972-150", "024-237-842-996-42X", "139-949-554-963-274", "187-081-622-009-122"], "cpc": ["A61K36/73", "A61K36/12", "A61K36/185", "A61K36/19", "A61K36/23", "A61K36/232", "A61K36/38", "A61K36/44", "A61K36/487", "A61K36/539", "A61K36/605", "A61K36/62", "A61K36/75", "A61P3/00", "A61P3/04", "A61P3/10", "A61P43/00"], "npl": 8, "fam": "F01"}, {"n": 3, "key": "US 11540380 B2", "j": "US", "kind": "B2", "lens": "177-468-719-102-722", "url": "https://lens.org/177-468-719-102-722", "pub": "2022-12-27", "year": 2022, "app": "2017-09-29", "prio": "2017-09-29", "title": "Flexible active species generator and use thereof", "abs": "The disclosure relates to a flexible active species generator comprising: a first electrode of a conductive metal thin film; a second electrode of a ground electrode; a flexible dielectric layer of an insulator formed between the first electrode and the second electrode; and a plasma resistant functional layer formed between the dielectric layer and the second electrode, wherein the first electrode and the second electrode are electrically connected to an external power supply to generate an atmospheric pressure plasma to generate active species. The flexible active species generator has a plasma resistant function to prevent deformation and decomposition of an insulator caused by the plasma as well as an active species generating function from atmospheric pressure plasma, and has durability and safety, which is thus applicable to articles, foods, garments and human body in various forms.", "applicants": ["KOREA INST MACH & MATERIALS", "KOREA INSTITUTE MATERIALS SCIENCE"], "inventors": ["LEE SEUNG HOON", "KIM DO GEUN", "JUNG SUNG HOON", "LEE YU RI", "CHOI DOO HO", "KIM BYOUNG JOON"], "owners": ["KOREA INSTITUTE OF MATERIALS SCIENCE (2020-01-20)", "KOREA INSTITUTE OF MACHINERY & MATERIALS (2018-10-22)"], "type": "Granted Patent", "status": "ACTIVE", "citedBy": 0, "cites": 26, "famSize": 3, "famJ": ["WO", "US"], "famIds": ["177-468-719-102-722", "173-121-143-265-079", "001-013-893-294-164"], "cpc": ["A61L2/14", "A61M37/00", "A61N1/44", "A61N1/0428", "A61N1/0476", "A61N1/0484", "A61N1/0492", "H05H1/2425", "H05H2245/34", "C02F1/4608", "H05H1/2441", "A23V2002/00", "A61L2/26", "A61L9/22", "A61L2202/11", "A61N1/0412", "A61N1/327", "C02F1/30", "C02F2201/483", "C02F2303/04", "H05H1/2406", "A23B2/503", "A61L2/02", "A61L2103/05"], "npl": 6, "fam": "F02"}, {"n": 4, "key": "US 2021/0112651 A1", "j": "US", "kind": "A1", "lens": "173-121-143-265-079", "url": "https://lens.org/173-121-143-265-079", "pub": "2021-04-15", "year": 2021, "app": "2017-09-29", "prio": "2017-09-29", "title": "FLEXIBLE ACTIVE SPECIES GENERATOR AND USE THEREOF", "abs": "The disclosure relates to a flexible active species generator comprising: a first electrode of a conductive metal thin film; a second electrode of a ground electrode; a flexible dielectric layer of an insulator formed between the first electrode and the second electrode; and a plasma resistant functional layer formed between the dielectric layer and the second electrode, wherein the first electrode and the second electrode are electrically connected to an external power supply to generate an atmospheric pressure plasma to generate active species. The flexible active species generator has a plasma resistant function to prevent deformation and decomposition of an insulator caused by the plasma as well as an active species generating function from atmospheric pressure plasma, and has durability and safety, which is thus applicable to articles, foods, garments and human body in various forms.", "applicants": ["KOREA INST MACH & MATERIALS"], "inventors": ["LEE SEUNG HOON", "KIM DO GEUN", "JUNG SUNG HOON", "LEE YU RI", "CHOI DOO HO", "KIM BYOUNG JOON"], "owners": ["KOREA INSTITUTE OF MATERIALS SCIENCE (2020-01-20)", "KOREA INSTITUTE OF MACHINERY & MATERIALS (2018-10-22)"], "type": "Patent Application", "status": "ACTIVE", "citedBy": 13, "cites": 0, "famSize": 3, "famJ": ["WO", "US"], "famIds": ["177-468-719-102-722", "173-121-143-265-079", "001-013-893-294-164"], "cpc": ["A61L2/14", "A61M37/00", "A61N1/44", "A61N1/0428", "A61N1/0476", "A61N1/0484", "A61N1/0492", "H05H1/2425", "H05H2245/34", "C02F1/4608", "H05H1/2441", "A23V2002/00", "A61L2/26", "A61L9/22", "A61L2202/11", "A61N1/0412", "A61N1/327", "C02F1/30", "C02F2201/483", "C02F2303/04", "H05H1/2406", "A23B2/503", "A61L2/02", "A61L2103/05"], "npl": 0, "fam": "F02"}, {"n": 5, "key": "CN 104256803 A", "j": "CN", "kind": "A", "lens": "083-385-843-380-867", "url": "https://lens.org/083-385-843-380-867", "pub": "2015-01-07", "year": 2015, "app": "2014-08-01", "prio": "2014-08-01", "title": "Spine date jasmine beverage and preparation method thereof", "abs": "The present invention discloses a spine date jasmine beverage and a preparation method thereof. The spine date jasmine beverage comprises the following raw materials by weight: 19-22 parts of palm oil, 18-20 parts of lucid ganoderma, 18-20 parts of agrocybe aegirit, 15-18 parts of esculente umbilicaria, 10-12 parts of spine date seed powder, 9-11 parts of jasmine essence, 8-9 parts of cabbage juice, 7-8 parts of cabbage, 9-10 parts of grilled chicken wings, 10-11 parts of grilled ham, 4-5 parts of allspice, 6-7 parts of Diospyros kaki L. f. constricta, 4- 5 parts of common baphicacanthus rhizome and root, 3-4 parts of sweetened green bean paste, 7-8 parts of chocolate, 0.5-1 part of cirsium japonicum, 0.5-1 part of malt, 0.5-1 part of licorice root, 0.5-1 part of psoralea corylifolia, 0.5-1 part of fructus perillae leaves, 15-20 parts of nutritional additives and the balance of water. The present invention uses spine date seed powder which has efficacy of pacifying liver and regulating qi, moistening lung to nourish yin, warming spleen-stomach and eliminating dampness, astringing qi and arresting sweating. The spine date jasmine beverage has diverse tastes, rich nutrition and a low price. The added traditional Chinese medicine has efficacy of reinforcing kidney and strengthening yang, treating spermatorrhea and arresting polyuria, warming spleen and checking diarrhea, and promoting inspiration to relieve asthma.", "applicants": ["ANHUI JIAXIANG FOOD CO LTD"], "inventors": ["WANG YONG"], "owners": [], "type": "Patent Application", "status": "INACTIVE", "citedBy": 3, "cites": 5, "famSize": 2, "famJ": ["CN"], "famIds": ["158-624-269-363-185", "083-385-843-380-867"], "cpc": ["A23L2/02", "A23L2/52", "A23L33/10", "A23L33/105", "A23V2002/00"], "npl": 3, "fam": "F03"}, {"n": 6, "key": "US 2021/0368859 A1", "j": "US", "kind": "A1", "lens": "118-048-357-277-849", "url": "https://lens.org/118-048-357-277-849", "pub": "2021-12-02", "year": 2021, "app": "2018-07-04", "prio": "2018-07-02", "title": "CIGARETTE FILLING PACKED BODY AND ELECTRONIC CIGARETTE CARTRIDGE", "abs": "A cigarette filling packed body and an electronic cigarette cartridge provide a filled packing while ensuring excellent airflow within the cigarette filling packed body. Elongated cigarette fillings are packed into a bundle shape with an outer peripheral portion wrapped around by a sheet-shaped packaging body. Each filling is formed such that, in a cross section orthogonal to the a direction, the dimension in the long-side direction is longer than the dimension in the short-side direction. Each of the cigarette fillings in an outermost peripheral portion are in contact with the packaging body and have a long-side direction oriented following the circumferential direction. The cigarette fillings are oriented particularly to enhance air flow.", "applicants": ["TOA IND CO LTD"], "inventors": ["WATANABE RYUJI"], "owners": ["TOA INDUSTRY CO. LTD (2020-03-31)", "FUTURE TECHNOLOGY CO. LTD (2021-10-01)"], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 8, "cites": 3, "famSize": 23, "famJ": ["KR", "RU", "CN", "TW", "EP", "WO", "JP", "US"], "famIds": ["028-373-296-802-449", "118-048-357-277-849", "103-954-050-212-290", "030-952-861-910-994", "045-980-560-989-371", "005-588-255-320-690", "125-830-158-542-527", "041-354-288-220-323", "105-590-435-383-371", "140-649-571-122-128", "099-716-743-306-541", "049-923-757-790-651", "073-157-596-094-697", "196-710-504-155-407", "119-382-851-698-681", "173-919-192-836-15X", "019-157-877-094-513", "060-201-520-857-487", "195-005-380-976-237", "034-262-339-683-108", "022-363-296-008-811", "088-084-787-941-668", "032-670-771-544-30X"], "cpc": ["A24F15/01", "A24D1/20", "A24B15/16", "A24C5/01", "A24C5/1814", "A24D1/18", "A24F40/20", "A24F40/42", "A24F47/00", "A24B3/14", "A24B15/167", "A24D1/006", "A24D1/042"], "npl": 0, "fam": "F04"}, {"n": 7, "key": "EP 3616537 A1", "j": "EP", "kind": "A1", "lens": "045-980-560-989-371", "url": "https://lens.org/045-980-560-989-371", "pub": "2020-03-04", "year": 2020, "app": "2018-07-04", "prio": "2018-07-02", "title": "CIGARETTE FILLING PACKED BODY AND ELECTRONIC CIGARETTE CARTRIDGE", "abs": "A tobacco filler assembly and an electronic cigarette cartridge, which improve the fluidity of the air flow inside the tobacco filler assembly while securing a certain filling rate or more for the tobacco filler assembly as a whole and not allow a tobacco filler to easily drop out, are provided.A tobacco filler assembly is obtained by accumulating long tobacco fillers 20 in a bundle and whose outer peripheral portion is wound with a sheet-shaped package 25, in which each tobacco filler 20 is formed such that a dimension in a long side direction is longer than a dimension in a short side direction in a cross section orthogonal to a length direction, and a long side direction of a tobacco filler 20 of an outermost peripheral portion in contact with the package 25 is directed in a direction approximately along a circumferential direction or the long side direction of the tobacco filler is directed in a direction other than the direction approximately along the circumferential direction, and the number of tobacco fillers 20 whose long side directions are directed in the direction approximately along the circumferential direction is larger than the number of tobacco fillers 20 whose long side directions are directed in the direction other than the direction approximately along the circumferential direction.", "applicants": ["TOA IND CO LTD"], "inventors": ["WATANABE RYUJI"], "owners": ["FUTURE TECHNOLOGY CO., LTD. (2021-11-17)"], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 8, "cites": 0, "famSize": 23, "famJ": ["KR", "RU", "CN", "TW", "EP", "WO", "JP", "US"], "famIds": ["028-373-296-802-449", "118-048-357-277-849", "103-954-050-212-290", "030-952-861-910-994", "045-980-560-989-371", "005-588-255-320-690", "125-830-158-542-527", "041-354-288-220-323", "105-590-435-383-371", "140-649-571-122-128", "099-716-743-306-541", "049-923-757-790-651", "073-157-596-094-697", "196-710-504-155-407", "119-382-851-698-681", "173-919-192-836-15X", "019-157-877-094-513", "060-201-520-857-487", "195-005-380-976-237", "034-262-339-683-108", "022-363-296-008-811", "088-084-787-941-668", "032-670-771-544-30X"], "cpc": ["A24F15/01", "A24D1/20", "A24B15/16", "A24C5/01", "A24C5/1814", "A24D1/18", "A24F40/20", "A24F40/42", "A24F47/00", "A24B3/14", "A24B15/167", "A24D1/006", "A24D1/042"], "npl": 0, "fam": "F04"}, {"n": 8, "key": "EP 4378326 A2", "j": "EP", "kind": "A2", "lens": "196-710-504-155-407", "url": "https://lens.org/196-710-504-155-407", "pub": "2024-06-05", "year": 2024, "app": "2018-07-04", "prio": "2018-07-02", "title": "TOBACCO FILLER ASSEMBLY AND ELECTRONIC CIGARETTE CARTRIDGE", "abs": "A tobacco filler assembly and an electronic cigarette cartridge, which improve the fluidity of the air flow inside the tobacco filler assembly while securing a certain filling rate or more for the tobacco filler assembly as a whole and not allow a tobacco filler to easily drop out, are provided.A tobacco filler assembly is obtained by accumulating long tobacco fillers 20 in a bundle and whose outer peripheral portion is wound with a sheet-shaped package 25, in which each tobacco filler 20 is formed such that a dimension in a long side direction is longer than a dimension in a short side direction in a cross section orthogonal to a length direction, and a long side direction of a tobacco filler 20 of an outermost peripheral portion in contact with the package 25 is directed in a direction approximately along a circumferential direction or the long side direction of the tobacco filler is directed in a direction other than the direction approximately along the circumferential direction, and the number of tobacco fillers 20 whose long side directions are directed in the direction approximately along the circumferential direction is larger than the number of tobacco fillers 20 whose long side directions are directed in the direction other than the direction approximately along the circumferential direction.", "applicants": ["FUTURE TECHNOLOGY CO LTD"], "inventors": ["WATANABE RYUJI"], "owners": [], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 0, "cites": 3, "famSize": 23, "famJ": ["KR", "RU", "CN", "TW", "EP", "WO", "JP", "US"], "famIds": ["028-373-296-802-449", "118-048-357-277-849", "103-954-050-212-290", "030-952-861-910-994", "045-980-560-989-371", "005-588-255-320-690", "125-830-158-542-527", "041-354-288-220-323", "105-590-435-383-371", "140-649-571-122-128", "099-716-743-306-541", "049-923-757-790-651", "073-157-596-094-697", "196-710-504-155-407", "119-382-851-698-681", "173-919-192-836-15X", "019-157-877-094-513", "060-201-520-857-487", "195-005-380-976-237", "034-262-339-683-108", "022-363-296-008-811", "088-084-787-941-668", "032-670-771-544-30X"], "cpc": ["A24F15/01", "A24D1/20", "A24B15/16", "A24C5/01", "A24C5/1814", "A24D1/18", "A24F40/20", "A24F40/42", "A24F47/00", "A24B3/14", "A24B15/167", "A24D1/006", "A24D1/042"], "npl": 0, "fam": "F04"}, {"n": 9, "key": "EP 1407679 A1", "j": "EP", "kind": "A1", "lens": "025-069-843-379-93X", "url": "https://lens.org/025-069-843-379-93X", "pub": "2004-04-14", "year": 2004, "app": "2002-06-21", "prio": "2001-06-21", "title": "PROCESS FOR PRODUCING PLANT EXTRACT CONTAINING PLANT POWDER", "abs": "A process for producing a liquid plant extract containing a plant powder is new. A process for producing a liquid plant extract containing a plant powder comprises concentrating a liquid extract, which is obtained from a plant containing an active ingredient and thus contains the active ingredient, in the presence of a plant powder; An independent claim is included for (1) a process for producing a plant extract containing a plant powder characterized by comprising concentrating a liquid extract, which is obtained from a plant containing an active ingredient and thus contains the active ingredient, in the presence of a plant powder followed by drying; (2) a plant powder-containing liquid plant extract or a plant powder-containing plant extract containing a liquid extract or an extract, which is obtained from a plant containing an active ingredient and thus contains the active ingredient, and a plant powder characterized in that the content of the active ingredient in the liquid extract or the extract is higher than the content of the active ingredient in the plant; and (3) foods, drinks or feeds containing the above-described plant powder-containing liquid plant extract or the plant powder-containing plant extract.", "applicants": ["KYOWA HAKKO KOGYO KK"], "inventors": ["SAKAI YASUSHI", "YOKOO YOSHIHARU"], "owners": ["KYOWA HAKKO BIO CO., LTD. (2009-04-29)"], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 24, "cites": 0, "famSize": 13, "famJ": ["KR", "CN", "HK", "CA", "EP", "JP", "WO", "US"], "famIds": ["073-727-510-185-523", "133-497-165-523-221", "088-848-758-442-71X", "104-616-106-906-174", "028-162-881-641-56X", "187-615-429-330-727", "032-815-035-345-18X", "066-412-551-728-854", "033-246-165-195-211", "016-236-061-726-078", "025-069-843-379-93X", "042-107-095-795-911", "114-796-165-614-562"], "cpc": ["A23K20/10", "A23K10/30", "A23L33/105"], "npl": 0, "fam": "F05"}, {"n": 10, "key": "US 2004/0161524 A1", "j": "US", "kind": "A1", "lens": "016-236-061-726-078", "url": "https://lens.org/016-236-061-726-078", "pub": "2004-08-19", "year": 2004, "app": "2003-12-19", "prio": "2001-06-21", "title": "Process for producing a plant extract containing plant powder", "abs": "The present invention relates to a method for producing a liquid plant extract containing plant powder, which comprises concentrating a liquid extract containing an active ingredient in the presence of the plant powder, the liquid extract being obtained from a plant containing the active ingredient; a process for producing a plant extract containing plant powder, which is characterized by comprises concentrating and drying a liquid extract containing an active ingredient in the presence of the plant powder, the liquid extract being obtained from a plant containing the active ingredient; a liquid plant extract or plant extract containing plant powder which comprises a liquid extract or plant extract containing the active ingredient obtained from a plant containing the active ingredient and comprises plant powder, and in which the content of the active ingredient in the liquid extract or plant extract is higher than that in the plant; and a food and drink or feed to which the liquid plant extract or plant extract containing plant powder is added.", "applicants": ["SAKAI YASUSHI", "YOKOO YOSHIHARU"], "inventors": ["SAKAI YASUSHI", "YOKOO YOSHIHARU"], "owners": ["KYOWA HAKKO BIO CO. LTD (2008-10-01)", "KYOWA HAKKO KOGYO CO. LTD (2003-11-26)"], "type": "Patent Application", "status": "EXPIRED", "citedBy": 135, "cites": 4, "famSize": 13, "famJ": ["KR", "CN", "HK", "CA", "EP", "JP", "WO", "US"], "famIds": ["073-727-510-185-523", "133-497-165-523-221", "088-848-758-442-71X", "104-616-106-906-174", "028-162-881-641-56X", "187-615-429-330-727", "032-815-035-345-18X", "066-412-551-728-854", "033-246-165-195-211", "016-236-061-726-078", "025-069-843-379-93X", "042-107-095-795-911", "114-796-165-614-562"], "cpc": ["A23K20/10", "A23K10/30", "A23L33/105"], "npl": 0, "fam": "F05"}, {"n": 11, "key": "US 7521079 B2", "j": "US", "kind": "B2", "lens": "073-727-510-185-523", "url": "https://lens.org/073-727-510-185-523", "pub": "2009-04-21", "year": 2009, "app": "2003-12-19", "prio": "2001-06-21", "title": "Process for producing an extract of Hydrangea containing plant powder", "abs": "The present invention relates to a method for producing a liquid plant extract containing plant powder, which includes concentrating a liquid extract containing an active ingredient in the presence of the plant powder, the liquid extract being obtained from a plant containing the active ingredient; a process for producing a plant extract containing plant powder, which is characterized by concentrating and drying a liquid extract containing an active ingredient in the presence of the plant powder.", "applicants": ["KYOWA HAKKO KOGYO KK"], "inventors": ["SAKAI YASUSHI", "YOKOO YOSHIHARU"], "owners": ["KYOWA HAKKO BIO CO. LTD (2008-10-01)", "KYOWA HAKKO KOGYO CO. LTD (2003-11-26)"], "type": "Granted Patent", "status": "EXPIRED", "citedBy": 8, "cites": 12, "famSize": 13, "famJ": ["KR", "CN", "HK", "CA", "EP", "JP", "WO", "US"], "famIds": ["073-727-510-185-523", "133-497-165-523-221", "088-848-758-442-71X", "104-616-106-906-174", "028-162-881-641-56X", "187-615-429-330-727", "032-815-035-345-18X", "066-412-551-728-854", "033-246-165-195-211", "016-236-061-726-078", "025-069-843-379-93X", "042-107-095-795-911", "114-796-165-614-562"], "cpc": ["A23K20/10", "A23K10/30", "A23L33/105"], "npl": 0, "fam": "F05"}, {"n": 12, "key": "WO 2001/022934 A2", "j": "WO", "kind": "A2", "lens": "181-885-366-517-157", "url": "https://lens.org/181-885-366-517-157", "pub": "2001-04-05", "year": 2001, "app": "2000-09-21", "prio": "1999-09-24", "title": "DELIVERY OF SMALL DOSES OF INGESTIBLE TREATMENTS", "abs": "Treatment of human or animal diseases, illnesses, and conditions may be effectively practiced by administering extremely small dosages of bioactive substances which cause a \"trigger effect\". By neurostimulating the human's or animal's brain one effects a positive physical manifestation by substantially solely influencing the human's or animal's gustatory, or gustatory and olfactory, receptors. This is typically accomplished using a delivery vehicle (such as a wafer, lozenge, or capsule) containing only between about 8 micrograms and 0.5 picograms (or about 5-10 microliters of about 6.7 x 10<-8> to 2.5 x 10<-15> molar solution) of the bioactive substance, and treatment is essentially as effective as if the same bioactive substance was used in conventional treatment of a patient, through the bloodstream.", "applicants": ["YNG WONG QUING NON"], "inventors": ["YNG-WONG QUING NON"], "owners": [], "type": "Patent Application", "status": "PENDING", "citedBy": 39, "cites": 0, "famSize": 3, "famJ": ["AU", "WO"], "famIds": ["057-912-099-132-978", "181-885-366-517-157", "027-448-085-956-365"], "cpc": ["A61K9/0056", "A61K35/618", "A61K36/254", "A61K36/752", "A61K36/79", "A61P25/22", "A61P43/00"], "npl": 0, "fam": "F06"}, {"n": 13, "key": "US 2004/0175439 A1", "j": "US", "kind": "A1", "lens": "167-447-401-283-118", "url": "https://lens.org/167-447-401-283-118", "pub": "2004-09-09", "year": 2004, "app": "2004-03-25", "prio": "2001-03-02", "title": "Plant extracts and compositions comprising extracellular protease inhibitors", "abs": "The present invention provides a plant derived extract comprising inhibitory activity against one or more extracellular proteases which degrade human tissue matrix. Moreover, the amount of inhibitory activity in an extract can be increased by stressing the plant prior to forming an extract. These extracts are each prepared by a standard process and demonstrate the ability to inhibit one or more extracellular proteases which degrade human tissue matrix. Libraries of extracts can be prepared from stressed and non-stressed plants, wherein each of the extracts demonstrate inhibitory activity against one or more extracellular protease inhibitors. Alternatively, semi-purified and purified inhibitory compounds can be isolated from the extracts following standard procedures. In one aspect, these extracts with inhibitory activity can be used during protein purification to minimize the degradation due to extracellular proteases.", "applicants": ["CYR BENOIT"], "inventors": ["CYR BENOIT"], "owners": ["BIOPHARMACOPAE DESIGN INTERNATIONAL INC (2004-03-08)"], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 65, "cites": 2, "famSize": 8, "famJ": ["EP", "WO", "US"], "famIds": ["031-032-515-818-946", "170-689-265-429-02X", "051-095-061-991-456", "167-447-401-283-118", "051-998-453-916-225", "197-211-583-681-025", "049-511-103-144-166", "136-337-346-548-395"], "cpc": ["A61K36/00", "A61K2800/782", "A61Q19/08", "A61K8/9794", "A61K8/9789", "A61K8/9761", "A61K8/9767", "A61P43/00", "A61K36/185", "A61K36/3486", "A61K36/577", "A61K36/5775", "A61K8/9783", "A61K36/704", "C12N9/99"], "npl": 0, "fam": "F07"}, {"n": 14, "key": "WO 2009/152389 A2", "j": "WO", "kind": "A2", "lens": "042-485-572-266-27X", "url": "https://lens.org/042-485-572-266-27X", "pub": "2009-12-17", "year": 2009, "app": "2009-06-11", "prio": "2008-06-11", "title": "SYSTEMS AND METHODS TO PERFORM INHIBITION DIAGNOSTIC TESTING", "abs": "System and methods to perform inhibition diagnostic testing utilizing a Petri dish based packaged applied materials kit to conduct growth inhibition testing of essential oil compositions, herbs, antibiotics, antifungals, anti-parasititic compounds applied to fungi, bacteria or other biological materials having confluent growth patterns that are derived from a patient's inoculum grown in a personal incubator. Resulting inhibition patterns are generated by at least one essential oil and/or a panel of essential oils or other applied materials distributed in fixed concentrations or concentration gradients to confluent lawns of bacterial and/or fungal lawns derived from the patient's clinical specimen. Images are acquired during the incubation periods to measure inhibition areas or zones that developed around applied the applied material compositions and the optimal therapeutic treatment is ascertained from analysis of the developing or generated inhibition zones.", "applicants": ["KATZENELSON OMER Y", "KATZENELSON ILEANNA L"], "inventors": ["KATZENELSON OMER Y", "KATZENELSON ILEANNA L"], "owners": [], "type": "Patent Application", "status": "PENDING", "citedBy": 3, "cites": 0, "famSize": 3, "famJ": ["WO", "US"], "famIds": ["044-316-333-985-846", "042-485-572-266-27X", "108-778-277-982-187"], "cpc": ["C12Q1/025"], "npl": 0, "fam": "F08"}, {"n": 15, "key": "US 2009/0310839 A1", "j": "US", "kind": "A1", "lens": "108-778-277-982-187", "url": "https://lens.org/108-778-277-982-187", "pub": "2009-12-17", "year": 2009, "app": "2009-06-11", "prio": "2008-06-11", "title": "SYSTEMS AND METHODS TO PERFORM INHIBITION DIAGNOSTIC TESTING", "abs": "System and methods to perform inhibition diagnostic testing utilizing a Petri dish based packaged applied materials kit to conduct growth inhibition testing of essential oil compositions, herbs, antibiotics, antifungals, anti-parasititic compounds applied to fungi, bacteria or other biological materials having confluent growth patterns that are derived from a patient's inoculum grown in a personal incubator. Resulting inhibition patterns are generated by at least one essential oil and/or a panel of essential oils or other applied materials distributed in fixed concentrations or concentration gradients to confluent lawns of bacterial and/or fungal lawns derived from the patient's clinical specimen. Images are acquired during the incubation periods to measure inhibition areas or zones that developed around applied the applied material compositions and the optimal therapeutic treatment is ascertained from analysis of the developing or generated inhibition zones.", "applicants": ["KATZENELSON OMER Y", "KATZENELSON ILEANA L"], "inventors": ["KATZENELSON OMER Y", "KATZENELSON ILEANA L"], "owners": [], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 24, "cites": 5, "famSize": 3, "famJ": ["WO", "US"], "famIds": ["044-316-333-985-846", "042-485-572-266-27X", "108-778-277-982-187"], "cpc": ["C12Q1/025"], "npl": 0, "fam": "F08"}, {"n": 16, "key": "US 2020/0197469 A1", "j": "US", "kind": "A1", "lens": "186-546-521-417-961", "url": "https://lens.org/186-546-521-417-961", "pub": "2020-06-25", "year": 2020, "app": "2019-12-18", "prio": "2018-12-20", "title": "ANTIVIRAL COMPOSITIONS AND METHODS", "abs": "The present application relates to a compositions and methods comprising or expressing a MOMO30 protein derived from Momordica balsamina. The MOMO30 protein is about 30 kDa in size, is stable after being autoclaved at 120° C. for 30 min, resists proteolytic cleavage by trypsin, exhibits mannose-sensitive binding HIV gp120, exhibits hemagglutinin and chitinase activity, is capable of activating and stimulating T cell proliferation, is capable of preventing infection by HIV-1 or alleviating symptoms in an HIV-1 infected patients and comprises the amino acid sequence of SEQ ID NO: 1. The MOMO30 protein and/or a nucleic acid encoding the same may be used in methods for preventing or treating viral infections by HIV and other enveloped viruses.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL D", "GBODOSSOU ERICK VIDJIN' AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2021-06-24)"], "type": "Patent Application", "status": "ACTIVE", "citedBy": 4, "cites": 0, "famSize": 9, "famJ": ["CN", "EP", "WO", "ZA", "US"], "famIds": ["121-838-757-498-119", "186-546-521-417-961", "059-052-807-226-314", "071-918-129-295-810", "007-776-114-307-418", "085-607-489-807-859", "025-829-078-820-466", "183-361-942-473-451", "019-905-329-402-109"], "cpc": ["C07K14/415", "A61K9/0095", "A61K9/14", "A61K9/20", "A61K9/48", "A61K36/42", "A61K38/168", "A61P31/18", "A61K38/10", "A61K9/0053", "A61K2236/00"], "npl": 0, "fam": "F09"}, {"n": 17, "key": "WO 2017/094916 A1", "j": "WO", "kind": "A1", "lens": "070-913-628-267-700", "url": "https://lens.org/070-913-628-267-700", "pub": "2017-06-08", "year": 2017, "app": "2016-12-05", "prio": "2015-12-04", "title": "GLYCEROL PRODUCTION PROMOTER DERIVED FROM Staphylococcus Epidermidis, ANTIMICROBIAL PEPTIDE PRODUCTION PROMOTER DERIVED FROM SKIN EPIDERMAL KERATINOCYTES, AND UTILIZATION THEREOF IN EXTERNAL PREPARATION FOR SKIN PROTECTION", "abs": "Provided are: a skin-protecting agent and an external preparation for skin protection, which not only synergistically work in combination with a plant polysaccharide but also has an effect of promoting the production of glycerol derived from Staphylococcus epidermidis, which is a skin resident bacterium useful on the skin, and the production of antimicrobial peptides derived from skin epidermal keratinocytes and exhibits excellent effect of improving the touch feeling when applied to the skin. More specifically, the present invention provides a skin protective agent and an external preparation for skin protection, which comprise a lactic acid bacterium belonging to the genus Enterococcus.", "applicants": ["ICHIMARU PHARCOS INC", "COMBI CORP"], "inventors": ["TAKAYAMA KAZUE", "MAKIOKA YUKO"], "owners": [], "type": "Patent Application", "status": "PENDING", "citedBy": 12, "cites": 7, "famSize": 9, "famJ": ["KR", "CN", "HK", "TW", "JP", "WO"], "famIds": ["104-960-561-728-157", "063-390-295-247-627", "051-730-693-484-508", "071-120-132-075-453", "088-603-680-488-607", "157-522-859-140-463", "029-891-679-675-439", "001-648-538-097-536", "070-913-628-267-700"], "cpc": ["A61K35/744", "A61K8/99", "A61K38/1729", "A61K2800/10", "A61P17/00", "A61P17/16", "A61P31/04", "A61Q17/005", "A61Q19/00", "A61K8/64"], "npl": 0, "fam": "F10"}, {"n": 18, "key": "WO 2020/132062 A1", "j": "WO", "kind": "A1", "lens": "019-905-329-402-109", "url": "https://lens.org/019-905-329-402-109", "pub": "2020-06-25", "year": 2020, "app": "2019-12-18", "prio": "2018-12-20", "title": "ANTIVIRAL COMPOSITIONS AND METHODS", "abs": "The present application relates to a compositions and methods comprising or expressing a MOMO30 protein derived from Momordica balsamina. The MOMO30 protein is about 30 kDa in size, is stable after being autoclaved at l20°C for 30 min, resists proteolytic cleavage by trypsin, exhibits mannose-sensitive binding HIV gpl20, exhibits hemagglutinin and chitinase activity, is capable of activating and stimulating T cell proliferation, is capable of preventing infection by HIV-l or alleviating symptoms in an HIV-l infected patients and comprises the amino acid sequence of SEQ ID NO: 1. The MOMO30 protein and/or a nucleic acid encoding the same may be used in methods for preventing or treating viral infections by HIV and other enveloped viruses.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN' AGNIH"], "owners": [], "type": "Patent Application", "status": "PENDING", "citedBy": 7, "cites": 1, "famSize": 9, "famJ": ["CN", "EP", "WO", "ZA", "US"], "famIds": ["121-838-757-498-119", "186-546-521-417-961", "059-052-807-226-314", "071-918-129-295-810", "007-776-114-307-418", "085-607-489-807-859", "025-829-078-820-466", "183-361-942-473-451", "019-905-329-402-109"], "cpc": ["C07K14/415", "A61K9/0095", "A61K9/14", "A61K9/20", "A61K9/48", "A61K36/42", "A61K38/168", "A61P31/18", "A61K38/10", "A61K9/0053", "A61K2236/00"], "npl": 3, "fam": "F09"}, {"n": 19, "key": "EP 4019032 A1", "j": "EP", "kind": "A1", "lens": "038-138-056-806-830", "url": "https://lens.org/038-138-056-806-830", "pub": "2022-06-29", "year": 2022, "app": "2021-08-16", "prio": "2020-08-18", "title": "METHOD OF TREATING CORONAVIRUS INFECTIONS", "abs": "The present application relates to a compositions and methods comprising or expressing a MOMO30 protein derived from Momordica balsamina. The MOMO30 protein is about 30 kDa in size, binds coronavirus S protein, is stable after being autoclaved at 120°C for 30 min, resists proteolytic cleavage by trypsin, exhibits mannose-sensitive binding to coronavirus spike (S) protein, exhibits hemagglutinin and chitinase activity, is capable of activating and stimulating T cell proliferation, is capable of preventing infection by a coronavirus or alleviating symptoms in coronavirus infected patients and comprises the amino acid sequence of SEQ ID NO: 1. The MOMO30 protein and/or a nucleic acid encoding the same may be used in methods for preventing or treating viral infections by coronaviruses and others.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN' AGNIH"], "owners": [], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 6, "cites": 3, "famSize": 2, "famJ": ["EP", "US"], "famIds": ["038-138-056-806-830", "077-680-951-201-445"], "cpc": ["A61K38/10", "A61K9/0095", "A61K36/42", "A61K38/47", "A61K45/06", "A61K2236/17", "A61K2236/31", "A61K2236/331", "A61K2236/53", "A61K2236/55", "A61P31/14", "C07K14/415", "C12N2750/14143", "C12Y302/01014", "A61K9/0056"], "npl": 10, "fam": "F09"}, {"n": 20, "key": "US 11413320 B2", "j": "US", "kind": "B2", "lens": "121-838-757-498-119", "url": "https://lens.org/121-838-757-498-119", "pub": "2022-08-16", "year": 2022, "app": "2019-12-18", "prio": "2018-12-20", "title": "Antiviral compositions and methods", "abs": "The present application relates to a compositions and methods comprising or expressing a MOMO30 protein derived from Momordica balsamina. The MOMO30 protein is about 30 kDa in size, is stable after being autoclaved at 120° C. for 30 min, resists proteolytic cleavage by trypsin, exhibits mannose-sensitive binding HIV gp120, exhibits hemagglutinin and chitinase activity, is capable of activating and stimulating T cell proliferation, is capable of preventing infection by HIV-1 or alleviating symptoms in an HIV-1 infected patients and comprises the amino acid sequence of SEQ ID NO: 1. The MOMO30 protein and/or a nucleic acid encoding the same may be used in methods for preventing or treating viral infections by HIV and other enveloped viruses.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL D", "GBODOSSOU ERICK VIDJIN′ AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2021-06-24)"], "type": "Granted Patent", "status": "ACTIVE", "citedBy": 2, "cites": 6, "famSize": 9, "famJ": ["CN", "EP", "WO", "ZA", "US"], "famIds": ["121-838-757-498-119", "186-546-521-417-961", "059-052-807-226-314", "071-918-129-295-810", "007-776-114-307-418", "085-607-489-807-859", "025-829-078-820-466", "183-361-942-473-451", "019-905-329-402-109"], "cpc": ["C07K14/415", "A61K9/0095", "A61K9/14", "A61K9/20", "A61K9/48", "A61K36/42", "A61K38/168", "A61P31/18", "A61K38/10", "A61K9/0053", "A61K2236/00"], "npl": 15, "fam": "F09"}, {"n": 21, "key": "US 11166999 B1", "j": "US", "kind": "B1", "lens": "077-680-951-201-445", "url": "https://lens.org/077-680-951-201-445", "pub": "2021-11-09", "year": 2021, "app": "2020-08-18", "prio": "2020-08-18", "title": "Method of treating coronavirus infections", "abs": "The present application relates to a compositions and methods comprising or expressing a MOMO30 protein derived from Momordica balsamina. The MOMO30 protein is about 30 kDa in size, binds coronavirus S protein, is stable after being autoclaved at 120° C. for 30 min, resists proteolytic cleavage by trypsin, exhibits mannose-sensitive binding to coronavirus spike (S) protein, exhibits hemagglutinin and chitinase activity, is capable of activating and stimulating T cell proliferation, is capable of preventing infection by a coronavirus or alleviating symptoms in coronavirus infected patients and comprises the amino acid sequence of SEQ ID NO: 1. The MOMO30 protein and/or a nucleic acid encoding the same may be used in methods for preventing or treating viral infections by coronaviruses and others.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN′ AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2021-06-24)"], "type": "Granted Patent", "status": "ACTIVE", "citedBy": 5, "cites": 27, "famSize": 2, "famJ": ["EP", "US"], "famIds": ["038-138-056-806-830", "077-680-951-201-445"], "cpc": ["A61K38/10", "A61K9/0095", "A61K36/42", "A61K38/47", "A61K45/06", "A61K2236/17", "A61K2236/31", "A61K2236/331", "A61K2236/53", "A61K2236/55", "A61P31/14", "C07K14/415", "C12N2750/14143", "C12Y302/01014", "A61K9/0056"], "npl": 18, "fam": "F09"}, {"n": 22, "key": "EP 1915997 A1", "j": "EP", "kind": "A1", "lens": "074-281-774-829-946", "url": "https://lens.org/074-281-774-829-946", "pub": "2008-04-30", "year": 2008, "app": "2006-06-30", "prio": "2005-08-12", "title": "AGENT FOR HAIR GROWTH", "abs": "The aim of this invention is to offer a novel agent for hair growth, which has excellent hair growth effects but not side effects. The agent for hair growth of the present invention is characterized by comprising a processed semi-mature soybean and/or a processed semi-mature soybean extracts and at least one substance selected from the group consisting of a processed Polygoni Multiflori Radix, processed Polygoni Multiflori Radix extracts, a processed Cynanchum bungei Decne or processed Cynanchum bungei Decne extracts ,preferably further comprising Longan seed and/or Longan seed extracts as active ingredients. This agent for hair growth has no side effects when used externally or internally, it can notably improve hair growth within a short period of time; ranging from 6 to 12 weeks, can return hair to its normal hair colour (for example from white to black) and can improve the gloss of hair.", "applicants": ["KOHNO KENJI"], "inventors": ["KOHNO KENJI"], "owners": [], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 14, "cites": 0, "famSize": 7, "famJ": ["KR", "EP", "JP", "WO", "US"], "famIds": ["179-552-371-661-332", "061-757-097-152-841", "188-660-146-711-596", "067-556-575-768-366", "187-799-325-875-895", "074-281-774-829-946", "158-669-417-153-729"], "cpc": ["A23L11/05", "A23L33/105", "A23V2002/00", "A61K8/9789", "A61K36/31", "A61K36/48", "A61K36/704", "A61K2800/92", "A61P17/14", "A61Q7/00", "A23L11/07", "A61K36/27", "A61K36/70", "A61K36/77", "A61K2800/59"], "npl": 0, "fam": "F11"}, {"n": 23, "key": "US 2009/0104295 A1", "j": "US", "kind": "A1", "lens": "158-669-417-153-729", "url": "https://lens.org/158-669-417-153-729", "pub": "2009-04-23", "year": 2009, "app": "2006-06-30", "prio": "2005-08-12", "title": "Agent for Hair Growth", "abs": "The aim of this invention is to offer a novel agent for hair growth, which has excellent hair growth effects but not side effects. The agent for hair growth of the present invention is characterized by comprising a processed semi-mature soybean and/or a processed semi-mature soybean extracts and at least one substance selected from the group consisting of a processed Polygoni Multiflori Radix, processed Polygoni Multiflori Radix extracts, a processed Cynanchum bungei Decne or processed Cynanchum bungei Decne extracts, preferably further comprising Longan seed and/or Longan seed extracts as active ingredients. This agent for hair growth has no side effects when used externally or internally, it can notably improve hair growth within a short period of time; ranging from 6 to 12 weeks, can return hair to its normal hair colour (for example from white to black) and can improve the gloss of hair.", "applicants": ["KOHNO KENJI"], "inventors": ["KOHNO KENJI"], "owners": [], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 87, "cites": 0, "famSize": 7, "famJ": ["KR", "EP", "JP", "WO", "US"], "famIds": ["179-552-371-661-332", "061-757-097-152-841", "188-660-146-711-596", "067-556-575-768-366", "187-799-325-875-895", "074-281-774-829-946", "158-669-417-153-729"], "cpc": ["A23L11/05", "A23L33/105", "A23V2002/00", "A61K8/9789", "A61K36/31", "A61K36/48", "A61K36/704", "A61K2800/92", "A61P17/14", "A61Q7/00", "A23L11/07", "A61K36/27", "A61K36/70", "A61K36/77", "A61K2800/59"], "npl": 0, "fam": "F11"}, {"n": 24, "key": "US 2022/0054601 A1", "j": "US", "kind": "A1", "lens": "008-733-877-342-699", "url": "https://lens.org/008-733-877-342-699", "pub": "2022-02-24", "year": 2022, "app": "2021-06-09", "prio": "2020-08-18", "title": "METHODS AND COMPOSITIONS FOR TREATING CORONAVIRUS INFECTIONS", "abs": "The present application relates to a compositions and methods comprising or expressing a HEVAR or MOMO30 protein derived from Momordica balsamina. The HEVAR or MOMO30 protein and/or a nucleic acid encoding the same may be used in methods for treating or preventing viral infections, particularly those caused by coronaviruses, such as SARS-CoV-2.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN' AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2021-06-24)"], "type": "Patent Application", "status": "ACTIVE", "citedBy": 2, "cites": 0, "famSize": 9, "famJ": ["EP", "WO", "ZA", "US"], "famIds": ["008-733-877-342-699", "032-684-385-279-453", "158-563-690-140-528", "005-127-951-257-742", "082-218-908-920-701", "114-622-083-136-667", "095-198-005-451-429", "090-003-682-994-805", "111-495-114-055-344"], "cpc": ["A61K38/47", "A61K9/0095", "A61K36/42", "A61K38/10", "A61K45/06", "A61K2236/17", "A61K2236/31", "A61K2236/331", "A61K2236/53", "A61K2236/55", "A61P31/14", "C07K14/415", "C12N2750/14143", "C12Y302/01014", "A61K9/0053", "A61K35/76", "A61K48/00"], "npl": 0, "fam": "F09"}, {"n": 25, "key": "WO 2022/039822 A1", "j": "WO", "kind": "A1", "lens": "082-218-908-920-701", "url": "https://lens.org/082-218-908-920-701", "pub": "2022-02-24", "year": 2022, "app": "2021-06-09", "prio": "2020-08-18", "title": "METHODS AND COMPOSITIONS FOR TREATING CORONAVIRUS INFECTIONS", "abs": "The present application relates to a compositions and methods comprising or expressing a HEVAR or MOMO30 protein derived from Momordica balsamina. The HEVAR or MOMO30 protein and/or a nucleic acid encoding the same may be used in methods for treating or preventing viral infections, particularly those caused by coronaviruses, such as SARS-CoV-2.", "applicants": ["MOREHOSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSU ERICK VIDJIN'"], "owners": [], "type": "Patent Application", "status": "PENDING", "citedBy": 5, "cites": 3, "famSize": 9, "famJ": ["EP", "WO", "ZA", "US"], "famIds": ["008-733-877-342-699", "032-684-385-279-453", "158-563-690-140-528", "005-127-951-257-742", "082-218-908-920-701", "114-622-083-136-667", "095-198-005-451-429", "090-003-682-994-805", "111-495-114-055-344"], "cpc": ["A61K38/47", "A61K9/0095", "A61K36/42", "A61K38/10", "A61K45/06", "A61K2236/17", "A61K2236/31", "A61K2236/331", "A61K2236/53", "A61K2236/55", "A61P31/14", "C07K14/415", "C12N2750/14143", "C12Y302/01014", "A61K9/0053", "A61K35/76", "A61K48/00"], "npl": 1, "fam": "F09"}, {"n": 26, "key": "US 11266723 B1", "j": "US", "kind": "B1", "lens": "158-563-690-140-528", "url": "https://lens.org/158-563-690-140-528", "pub": "2022-03-08", "year": 2022, "app": "2021-06-09", "prio": "2020-08-18", "title": "Methods and compositions for treating coronavirus infections", "abs": "The present application relates to a compositions and methods comprising or expressing a HEVAR or MOMO30 protein derived from Momordica balsamina. The HEVAR or MOMO30 protein and/or a nucleic acid encoding the same may be used in methods for treating or preventing viral infections, particularly those caused by coronaviruses, such as SARS-CoV-2.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN' AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2021-06-24)"], "type": "Granted Patent", "status": "ACTIVE", "citedBy": 3, "cites": 8, "famSize": 9, "famJ": ["EP", "WO", "ZA", "US"], "famIds": ["008-733-877-342-699", "032-684-385-279-453", "158-563-690-140-528", "005-127-951-257-742", "082-218-908-920-701", "114-622-083-136-667", "095-198-005-451-429", "090-003-682-994-805", "111-495-114-055-344"], "cpc": ["A61K38/47", "A61K9/0095", "A61K36/42", "A61K38/10", "A61K45/06", "A61K2236/17", "A61K2236/31", "A61K2236/331", "A61K2236/53", "A61K2236/55", "A61P31/14", "C07K14/415", "C12N2750/14143", "C12Y302/01014", "A61K9/0053", "A61K35/76", "A61K48/00"], "npl": 15, "fam": "F09"}, {"n": 27, "key": "WO 2022/261585 A1", "j": "WO", "kind": "A1", "lens": "042-169-562-012-810", "url": "https://lens.org/042-169-562-012-810", "pub": "2022-12-15", "year": 2022, "app": "2022-04-27", "prio": "2021-06-09", "title": "HEVAMINE-RELATED PLANT COMPOSITION AND METHODS", "abs": "The present application relates to a compositions and methods comprising or expressing a hevamine A-related MoMo30 protein from Momordica balsamina. The MoMo30 protein is about 30 kDa in size, is stable after being autoclaved at 120°C for 30 min, resists proteolytic cleavage by trypsin, exhibits mannose-sensitive binding to HIV gp120, exhibits hemagglutinin and chitinase activity, is capable of activating and stimulating T cell proliferation, is capable of preventing infection by HIV-1 or alleviating symptoms in an HIV-1 infected patients, and comprises an amino acid sequence of SEQ ID NO: 4. The MoMo30 protein and/or a nucleic acid encoding the same may be used in methods for preventing or treating microbial infections by HIV, SARS-CoV-2 and other enveloped viruses, as well as other microorganisms comprising cell surface proteins containing glycan residues, such as mannose.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK"], "owners": [], "type": "Patent Application", "status": "PENDING", "citedBy": 1, "cites": 5, "famSize": 10, "famJ": ["EP", "WO", "US"], "famIds": ["042-169-562-012-810", "035-281-640-113-278", "076-521-827-828-617", "109-203-152-619-72X", "028-867-247-017-41X", "148-512-701-186-669", "150-794-823-330-227", "036-164-772-894-719", "156-167-944-220-230", "163-485-144-806-003"], "cpc": ["A61K38/168", "A61P31/12", "A61P31/16", "A61P31/18", "C12N15/8279", "Y02A50/30", "A61K36/42", "A01N63/50", "A01P1/00", "A61K33/30", "A61K38/47", "C07K2319/01", "C12N15/1096", "C12N15/8283", "C12P19/34"], "npl": 18, "fam": "F09"}, {"n": 28, "key": "EP 1604647 B1", "j": "EP", "kind": "B1", "lens": "036-987-792-661-637", "url": "https://lens.org/036-987-792-661-637", "pub": "2008-05-07", "year": 2008, "app": "2005-05-11", "prio": "2004-05-12", "title": "Cosmetic composition containing polyorganosiloxane-containing epsilon-polylysine polymer, and polyhydric alcohol, and production thereof", "abs": "", "applicants": ["CHISSO CORP"], "inventors": ["KAWASAKI YUJI", "HORI MICHIMASA", "YAMAMOTO YUICHI", "HIRAKI JUN"], "owners": ["CHISSO CORPORATION (2008-02-13)"], "type": "Granted Patent", "status": "EXPIRED", "citedBy": 2, "cites": 4, "famSize": 3, "famJ": ["EP", "US"], "famIds": ["165-031-512-573-749", "125-630-371-800-664", "036-987-792-661-637"], "cpc": ["C08G77/452", "A61K8/898", "A61Q1/02", "A61Q1/04", "A61Q1/06", "A61Q1/08", "A61Q1/10", "A61Q1/12", "A61Q5/00", "A61Q5/02", "A61Q5/04", "A61Q5/06", "A61Q5/12", "A61Q7/00", "A61Q19/10"], "npl": 0, "fam": "F12"}, {"n": 29, "key": "EP 1604647 A1", "j": "EP", "kind": "A1", "lens": "125-630-371-800-664", "url": "https://lens.org/125-630-371-800-664", "pub": "2005-12-14", "year": 2005, "app": "2005-05-11", "prio": "2004-05-12", "title": "Cosmetic composition containing polyorganosiloxane-containing epsilon-polylysine polymer, and polyhydric alcohol, and production thereof", "abs": "It has been desired to develop a highly preservative and antibacterial cosmetic composition that can easily be applied to both emulsion and non-emulsion type cosmetics. It has also been desired to develop a method of improving a preservative and/or antibacterial effect(s) of a cosmetic composition comprising polyorganosiloxane-containing epsilon-polylysine and thereby reducing the amount of antibacterial preservative agent to be used.There is provided a cosmetic composition comprising one or a combination of two or more of polyorganosiloxane-containing epsilon-polylysine compounds obtained by reacting epsilon-polylysine with polyorganosiloxane or a physiologically acceptable salt thereof, and polyhydric alcohol.", "applicants": ["ICHIMARU PHARCOS INC", "CHISSO CORP"], "inventors": ["KAWASAKI YUJI", "HORI MICHIMASA", "YAMAMOTO YUICHI", "HIRAKI JUN"], "owners": ["CHISSO CORPORATION (2008-02-13)"], "type": "Patent Application", "status": "EXPIRED", "citedBy": 62, "cites": 4, "famSize": 3, "famJ": ["EP", "US"], "famIds": ["165-031-512-573-749", "125-630-371-800-664", "036-987-792-661-637"], "cpc": ["C08G77/452", "A61K8/898", "A61Q1/02", "A61Q1/04", "A61Q1/06", "A61Q1/08", "A61Q1/10", "A61Q1/12", "A61Q5/00", "A61Q5/02", "A61Q5/04", "A61Q5/06", "A61Q5/12", "A61Q7/00", "A61Q19/10"], "npl": 0, "fam": "F12"}, {"n": 30, "key": "US 2006/0018867 A1", "j": "US", "kind": "A1", "lens": "165-031-512-573-749", "url": "https://lens.org/165-031-512-573-749", "pub": "2006-01-26", "year": 2006, "app": "2005-05-11", "prio": "2004-05-12", "title": "Cosmetic composition and production thereof", "abs": "It has been desired to develop a highly preservative and antibacterial cosmetic composition that can easily be applied to both emulsion and non-emulsion type cosmetics. It has also been desired to develop a method of improving a preservative and/or antibacterial effect(s) of a cosmetic composition comprising polyorganosiloxane-containing epsilon-polylysine and thereby reducing the amount of antibacterial preservative agent to be used. There is provided a cosmetic composition comprising one or a combination of two or more of polyorganosiloxane-containing epsilon-polylysine compounds obtained by reacting epsilon-polylysine with polyorganosiloxane or a physiologically acceptable salt thereof, and polyhydric alcohol.", "applicants": ["CHISSO CORP"], "inventors": ["KAWASAKI YUJI", "HORI MICHIMASA", "YAMAMOTO YUICHI", "HIRAKI JUN"], "owners": ["ICHIMARU PHARCOS CO. LTD (2005-09-14)", "CHISSO CORPORATION (2005-09-12)"], "type": "Patent Application", "status": "DISCONTINUED", "citedBy": 275, "cites": 3, "famSize": 3, "famJ": ["EP", "US"], "famIds": ["165-031-512-573-749", "125-630-371-800-664", "036-987-792-661-637"], "cpc": ["C08G77/452", "A61K8/898", "A61Q1/02", "A61Q1/04", "A61Q1/06", "A61Q1/08", "A61Q1/10", "A61Q1/12", "A61Q5/00", "A61Q5/02", "A61Q5/04", "A61Q5/06", "A61Q5/12", "A61Q7/00", "A61Q19/10"], "npl": 0, "fam": "F12"}, {"n": 31, "key": "US 12246052 B2", "j": "US", "kind": "B2", "lens": "163-485-144-806-003", "url": "https://lens.org/163-485-144-806-003", "pub": "2025-03-11", "year": 2025, "app": "2024-02-05", "prio": "2021-06-09", "title": "Antimicrobial hevamine A-related compositions and methods", "abs": "In one aspect, nutraceutical compositions, methods of preparation and methods of use comprise a nutraceutical composition comprising an antimicrobial hevamine A-related protein from Momordica balsamina alone or in combination with one or more nutraceutical ingredients. In another aspect, a method of preventing or treating a microbial infection in a plant comprises applying an effective amount of a composition containing the hevamine A-related protein to a whole plant, plant part, or media in which the plant is growing. In a further aspect, the present application provides a transgenic plant stably transformed with a polynucleotide encoding the hevamine A-related protein.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN' AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2022-06-22)"], "type": "Granted Patent", "status": "ACTIVE", "citedBy": 2, "cites": 31, "famSize": 10, "famJ": ["EP", "WO", "US"], "famIds": ["042-169-562-012-810", "035-281-640-113-278", "076-521-827-828-617", "109-203-152-619-72X", "028-867-247-017-41X", "148-512-701-186-669", "150-794-823-330-227", "036-164-772-894-719", "156-167-944-220-230", "163-485-144-806-003"], "cpc": ["A61K38/168", "A61P31/12", "A61P31/16", "A61P31/18", "C12N15/8279", "Y02A50/30", "A61K36/42", "C07K2319/01", "C12N15/1096", "C12P19/34", "A01N63/50", "A01P1/00", "A61K33/30", "A61K38/47", "C12N15/8283"], "npl": 19, "fam": "F09"}, {"n": 32, "key": "US 2024/0325481 A1", "j": "US", "kind": "A1", "lens": "035-281-640-113-278", "url": "https://lens.org/035-281-640-113-278", "pub": "2024-10-03", "year": 2024, "app": "2024-02-05", "prio": "2021-06-09", "title": "ANTIMICROBIAL HEVAMINE A-RELATED COMPOSITIONS AND METHODS", "abs": "In one aspect, nutraceutical compositions, methods of preparation and methods of use comprise a nutraceutical composition comprising an antimicrobial hevamine A-related protein from Momordica balsamina alone or in combination with one or more nutraceutical ingredients. In another aspect, a method of preventing or treating a microbial infection in a plant comprises applying an effective amount of a composition containing the hevamine A-related protein to a whole plant, plant part, or media in which the plant is growing. In a further aspect, the present application provides a transgenic plant stably transformed with a polynucleotide encoding the hevamine A-related protein.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN’ AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2022-06-22)"], "type": "Patent Application", "status": "ACTIVE", "citedBy": 0, "cites": 0, "famSize": 10, "famJ": ["EP", "WO", "US"], "famIds": ["042-169-562-012-810", "035-281-640-113-278", "076-521-827-828-617", "109-203-152-619-72X", "028-867-247-017-41X", "148-512-701-186-669", "150-794-823-330-227", "036-164-772-894-719", "156-167-944-220-230", "163-485-144-806-003"], "cpc": ["A61K38/168", "A61P31/12", "A61P31/16", "A61P31/18", "C12N15/8279", "Y02A50/30", "A61K36/42", "C07K2319/01", "C12N15/1096", "C12P19/34", "A01N63/50", "A01P1/00", "A61K33/30", "A61K38/47", "C12N15/8283"], "npl": 0, "fam": "F09"}, {"n": 33, "key": "US 2022/0401527 A1", "j": "US", "kind": "A1", "lens": "036-164-772-894-719", "url": "https://lens.org/036-164-772-894-719", "pub": "2022-12-22", "year": 2022, "app": "2022-06-07", "prio": "2021-06-09", "title": "ANTIMICROBIAL HEVAMINE A-RELATED COMPOSITIONS AND METHODS", "abs": "In one aspect, nutraceutical compositions, methods of preparation and methods of use comprise a nutraceutical composition comprising an antimicrobial hevamine A-related protein from Momordica balsamina alone or in combination with one or more nutraceutical ingredients. In another aspect, a method of preventing or treating a microbial infection in a plant comprises applying an effective amount of a composition containing the hevamine A-related protein to a whole plant, plant part, or media in which the plant is growing. In a further aspect, the present application provides a transgenic plant stably transformed with a polynucleotide encoding the hevamine A-related protein.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN' AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2022-06-22)"], "type": "Patent Application", "status": "ACTIVE", "citedBy": 0, "cites": 0, "famSize": 10, "famJ": ["EP", "WO", "US"], "famIds": ["042-169-562-012-810", "035-281-640-113-278", "076-521-827-828-617", "109-203-152-619-72X", "028-867-247-017-41X", "148-512-701-186-669", "150-794-823-330-227", "036-164-772-894-719", "156-167-944-220-230", "163-485-144-806-003"], "cpc": ["A61K38/168", "A61P31/12", "A61P31/16", "A61P31/18", "C12N15/8279", "Y02A50/30", "A61K36/42", "A01N63/50", "A01P1/00", "A61K33/30", "A61K38/47", "C07K2319/01", "C12N15/1096", "C12N15/8283", "C12P19/34"], "npl": 0, "fam": "F09"}, {"n": 34, "key": "WO 2022/261067 A1", "j": "WO", "kind": "A1", "lens": "148-512-701-186-669", "url": "https://lens.org/148-512-701-186-669", "pub": "2022-12-15", "year": 2022, "app": "2022-06-07", "prio": "2021-06-09", "title": "ANTIMICROBIAL HEVAMINE A-RELATED COMPOSITIONS AND METHODS", "abs": "In one aspect, nutraceutical compositions, methods of preparation and methods of use comprise a nutraceutical composition comprising an antimicrobial hevamine A-related protein from Momordica balsamina alone or in combination with one or more nutraceutical ingredients. In another aspect, a method of preventing or treating a microbial infection in a plant comprises applying an effective amount of a composition containing the hevamine A- related protein to a whole plant, plant part, or media in which the plant is growing. In a further aspect, the present application provides a transgenic plant stably transformed with a polynucleotide encoding the hevamine A-related protein.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWER MICHAEL", "GBODOSSOU ERICK"], "owners": [], "type": "Patent Application", "status": "PENDING", "citedBy": 0, "cites": 32, "famSize": 10, "famJ": ["EP", "WO", "US"], "famIds": ["042-169-562-012-810", "035-281-640-113-278", "076-521-827-828-617", "109-203-152-619-72X", "028-867-247-017-41X", "148-512-701-186-669", "150-794-823-330-227", "036-164-772-894-719", "156-167-944-220-230", "163-485-144-806-003"], "cpc": ["A61K38/168", "A61P31/12", "A61P31/16", "A61P31/18", "C12N15/8279", "Y02A50/30", "A61K36/42", "A01N63/50", "A01P1/00", "A61K33/30", "A61K38/47", "C07K2319/01", "C12N15/1096", "C12N15/8283", "C12P19/34"], "npl": 16, "fam": "F09"}, {"n": 35, "key": "US 11925670 B2", "j": "US", "kind": "B2", "lens": "109-203-152-619-72X", "url": "https://lens.org/109-203-152-619-72X", "pub": "2024-03-12", "year": 2024, "app": "2022-06-07", "prio": "2021-06-09", "title": "Antimicrobial hevamine A-related compositions and methods", "abs": "In one aspect, nutraceutical compositions, methods of preparation and methods of use comprise a nutraceutical composition comprising an antimicrobial hevamine A-related protein from Momordica balsamina alone or in combination with one or more nutraceutical ingredients. In another aspect, a method of preventing or treating a microbial infection in a plant comprises applying an effective amount of a composition containing the hevamine A-related protein to a whole plant, plant part, or media in which the plant is growing. In a further aspect, the present application provides a transgenic plant stably transformed with a polynucleotide encoding the hevamine A-related protein.", "applicants": ["MOREHOUSE SCHOOL OF MEDICINE"], "inventors": ["POWELL MICHAEL", "GBODOSSOU ERICK VIDJIN' AGNIH"], "owners": ["MOREHOUSE SCHOOL OF MEDICINE (2022-06-22)"], "type": "Granted Patent", "status": "ACTIVE", "citedBy": 2, "cites": 32, "famSize": 10, "famJ": ["EP", "WO", "US"], "famIds": ["042-169-562-012-810", "035-281-640-113-278", "076-521-827-828-617", "109-203-152-619-72X", "028-867-247-017-41X", "148-512-701-186-669", "150-794-823-330-227", "036-164-772-894-719", "156-167-944-220-230", "163-485-144-806-003"], "cpc": ["A61K38/168", "A61P31/12", "A61P31/16", "A61P31/18", "C12N15/8279", "Y02A50/30", "A61K36/42", "A01N63/50", "A01P1/00", "A61K33/30", "A61K38/47", "C07K2319/01", "C12N15/1096", "C12N15/8283", "C12P19/34"], "npl": 18, "fam": "F09"}], "families": [{"id": "F07", "docs": [13], "score": 85, "kind": "Oportunidad", "rel": "Alta", "name": "Extractos vegetales antiproteasas (antienvejecimiento)", "holder": "Biopharmacopae Design International (Canadá)", "tech": "Extractos de plantas que inhiben proteasas extracelulares que degradan la matriz de la piel (CPC A61Q19/08, antienvejecimiento). La actividad aumenta si la planta se somete a estrés antes de extraer.", "lines": ["Sleeping Mask (Bakuchiol & Zapote Negro)", "Suero Facial Opuntia", "Mask & Scrub (tepezcohuite)"], "status": "Abandonada en EE. UU.; prioridad 2001, así que toda la familia ya superó 20 años. Sin familia en México.", "action": "Tecnología libre. Diseñar con la UAEH un tamizaje de inhibición de colagenasa y elastasa en tepezcohuite, zapote negro y cempasúchil, incluyendo plantas sometidas a estrés. Si da resultado, respalda claims antiedad y podría llevar a una patente propia sobre la planta mexicana concreta."}, {"id": "F05", "docs": [9, 10, 11], "score": 76, "kind": "Oportunidad", "rel": "Media-alta", "name": "Extracto concentrado sobre polvo de la propia planta", "holder": "Kyowa Hakko (Japón)", "tech": "Proceso para concentrar un extracto líquido en presencia de polvo vegetal y secarlo: se obtiene un extracto en polvo con más activo que la planta original. Citada 135 veces, es tecnología base.", "lines": ["Mask & Scrub (formato en polvo)", "Jabones y formatos sólidos"], "status": "Expirada (US) y abandonada (EP); prioridad 2001, dominio público. Sin familia en México.", "action": "Probar el método con tepezcohuite: concentrar extracto de corteza sobre polvo de corteza para un exfoliante con más taninos. Documentarlo como know-how propio y medir taninos antes y después."}, {"id": "F10", "docs": [17], "score": 72, "kind": "Oportunidad", "rel": "Media-alta", "name": "Postbiótico de Enterococcus para el microbioma de la piel", "holder": "Ichimaru Pharcos + Combi (Japón)", "tech": "Bacteria láctica del género Enterococcus que, combinada con un polisacárido vegetal, estimula la producción de glicerol de Staphylococcus epidermidis y de péptidos antimicrobianos en la piel.", "lines": ["Fermentación / postbióticos", "Clean / piel sensible", "Agua Tónica, sueros"], "status": "WO de 2016 con familia en JP, KR, CN, HK y TW. No hay miembros en México, EE. UU. ni Europa en este registro.", "action": "Señal de hacia dónde va un proveedor japonés de ingredientes. Explorar un activo postbiótico con un ingrediente mexicano (miel melipona, tuna) más polisacáridos de aloe u Opuntia. Confirmar en Lens que no hay fases nacionales nuevas antes de lanzar."}, {"id": "F12", "docs": [28, 29, 30], "score": 64, "kind": "Oportunidad", "rel": "Media", "name": "Conservador con ε-polilisina para cosméticos", "holder": "Chisso + Ichimaru Pharcos (Japón)", "tech": "ε-polilisina (antimicrobiano obtenido por fermentación) unida a silicona y combinada con polioles para reducir conservadores en emulsiones, maquillaje y shampoo. Citada 275 veces.", "lines": ["Conservación natural", "Maquillaje Líquido", "Shampoos"], "status": "Expirada (EP) y abandonada (US); prioridad 2004. Sin familia en México.", "action": "Libre, pero la parte siliconada choca con el discurso clean. Lo aprovechable es la ε-polilisina con glicerina u otros polioles como sistema conservador de bajo impacto; evaluarlo en Maquillaje Líquido y Agua Tónica."}, {"id": "F11", "docs": [22, 23], "score": 45, "kind": "Oportunidad", "rel": "Media", "name": "Fórmula herbal para crecimiento capilar", "holder": "Kohno Kenji (Japón)", "tech": "Soya semimadura procesada con raíz de Polygonum multiflorum o Cynanchum y semilla de longan, para uso externo o interno.", "lines": ["Línea de cabello (A61Q5)"], "status": "Abandonada en EE. UU. y Europa; presentada en 2006, ya superó 20 años. Sin familia en México.", "action": "Sirve como concepto para la línea capilar con equivalentes mexicanos. Cuidado: 'crecimiento de cabello' es un claim de medicamento ante COFEPRIS; comunicar como 'fortalece' o 'nutre'."}, {"id": "F02", "docs": [3, 4], "score": 20, "kind": "Amenaza fuera de México", "rel": "Baja", "name": "Generador flexible de plasma atmosférico", "holder": "Korea Inst. of Machinery & Materials / Korea Inst. of Materials Science", "tech": "Dispositivo flexible que genera plasma atmosférico y especies activas, aplicable a objetos, alimentos, prendas y cuerpo humano.", "lines": ["Accesorios (hoy solo gua sha manual)"], "status": "Concedida y vigente en EE. UU. (US 11540380 B2), vence hacia 2037 (estimado). Sin familia en México.", "action": "Ninguna inmediata. Solo importa si AHAL desarrolla accesorios electrónicos para exportar a EE. UU."}, {"id": "F09", "docs": [16, 18, 19, 20, 21, 24, 25, 26, 27, 31, 32, 33, 34, 35], "score": 18, "kind": "Amenaza fuera de México", "rel": "Baja", "name": "Proteína MoMo30 de Momordica balsamina (antiviral/antimicrobiana)", "holder": "Morehouse School of Medicine (EE. UU.)", "tech": "Proteína vegetal de 30 kDa con actividad contra VIH, SARS-CoV-2 y otros microorganismos con glicanos. Es la familia más activa del conjunto: 14 documentos y 5 patentes concedidas en EE. UU.", "lines": ["Conservación natural / antimicrobianos vegetales"], "status": "Varias concedidas y vigentes en EE. UU. (2021-2025); solicitudes EP y WO. Sin familia en México.", "action": "Uso terapéutico, lejos del catálogo. Evitar proteínas de Momordica como antimicrobiano si AHAL exporta a EE. UU. Vale como señal: hay inversión académica fuerte en antimicrobianos de origen vegetal."}, {"id": "F01", "docs": [1, 2], "score": 15, "kind": "Señal", "rel": "Baja", "name": "Extractos vegetales orales para control de peso", "holder": "Access Business Group + Univ. de Colorado (EE. UU.)", "tech": "Extractos de plantas que inhiben la cetohexoquinasa (medida por IC50) para reducir antojo de azúcar y apoyar el control de peso. Vía oral.", "lines": ["Fuera del catálogo (suplementos)"], "status": "Abandonada en EE. UU.; la WO de 2014 ya cerró su fase internacional. Sin familia en México.", "action": "Solo referencia de método: documentar la actividad de extractos con ensayos tipo IC50 ayuda a respaldar claims."}, {"id": "F03", "docs": [5], "score": 6, "kind": "Ruido", "rel": "Nula", "name": "Bebida de azufaifo y jazmín", "holder": "Anhui Jiaxiang Food (China)", "tech": "Bebida alimentaria. Entró a la pesquisa porque menciona Psoralea corylifolia (fuente de bakuchiol) y Diospyros kaki (pariente del zapote negro).", "lines": [], "status": "Inactiva, solo China.", "action": "Descartar. Ajustar la query para exigir términos cosméticos (A61K8, A61Q)."}, {"id": "F06", "docs": [12], "score": 4, "kind": "Ruido", "rel": "Nula", "name": "Microdosis ingeribles por vía gustativa", "holder": "Yng Wong Quing Non", "tech": "Administración de dosis mínimas de sustancias bioactivas por receptores del gusto.", "lines": [], "status": "WO de 2000, fase internacional concluida; solo AU.", "action": "Descartar."}, {"id": "F04", "docs": [6, 7, 8], "score": 0, "kind": "Ruido", "rel": "Nula", "name": "Cartuchos de cigarro electrónico", "holder": "TOA Industry / Future Technology (Japón)", "tech": "Relleno de tabaco y cartucho para cigarro electrónico.", "lines": [], "status": "Abandonadas.", "action": "Descartar. Excluir A24 en la query."}, {"id": "F08", "docs": [14, 15], "score": 0, "kind": "Ruido", "rel": "Nula", "name": "Pruebas diagnósticas de inhibición", "holder": "Katzenelson (EE. UU.)", "tech": "Sistemas y métodos de pruebas diagnósticas microbiológicas.", "lines": [], "status": "Abandonadas o con fase internacional concluida.", "action": "Descartar."}], "ahal": {"ingredients": [{"name": "Tepezcohuite", "products": "Mask & Scrub (mascarilla-exfoliante)", "sci": "Mimosa tenuiflora (sin. Mimosa hostilis)", "kw": "tepezcohuite; Mimosa tenuiflora bark extract; wound healing; skin regeneration", "actives": "taninos condensados, saponinas, flavonoides", "prio": "Alta", "qpat": "(\"Mimosa tenuiflora\" OR tepezcohuite) AND (cosmetic OR skin)"}, {"name": "Cempasúchil", "products": "Agua Tónica (Tonic Mist)", "sci": "Tagetes erecta", "kw": "marigold extract; Tagetes erecta flower; lutein skin; anti-inflammatory", "actives": "luteína, quercetagetina, patuletina", "prio": "Alta", "qpat": "(\"Tagetes erecta\" OR marigold) AND (cosmetic OR skin OR toner)"}, {"name": "Tuna / Opuntia", "products": "Suero Facial Opuntia; Agua Tónica", "sci": "Opuntia ficus-indica", "kw": "prickly pear seed oil; Opuntia ficus-indica extract; cactus extract skin", "actives": "betalaínas, tocoferoles, ácido linoleico", "prio": "Alta", "qpat": "(\"Opuntia ficus-indica\" OR \"prickly pear\") AND (serum OR \"seed oil\") AND cosmetic"}, {"name": "Miel melipona / maya", "products": "Jabón Facial Miel Melipona; Jabón Corporal Miel Maya", "sci": "Melipona beecheii", "kw": "stingless bee honey; Melipona honey; meliponine honey antimicrobial", "actives": "fenoles, flavonoides", "prio": "Alta", "qpat": "(\"stingless bee\" OR Melipona) AND honey AND (soap OR skin OR cosmetic)"}, {"name": "Zapote negro", "products": "Sleeping Mask (Bakuchiol & Zapote Negro)", "sci": "Diospyros nigra (sin. D. digyna)", "kw": "black sapote; Diospyros digyna extract; antioxidant", "actives": "carotenoides, polifenoles, vitamina C", "prio": "Alta", "qpat": "(\"Diospyros digyna\" OR \"Diospyros nigra\" OR \"black sapote\") AND (cosmetic OR skin)"}, {"name": "Carmín (cochinilla)", "products": "Delineadores y maquillaje de color", "sci": "Dactylopius coccus", "kw": "carmine; cochineal; carminic acid; natural colorant cosmetics", "actives": "ácido carmínico", "prio": "Media", "qpat": "(carmine OR cochineal OR \"carminic acid\") AND (cosmetic OR lipstick OR eyeliner)"}, {"name": "Cacao", "products": "Bálsamos", "sci": "Theobroma cacao", "kw": "cocoa butter; cacao extract skin", "actives": "polifenoles, ácidos grasos", "prio": "Baja", "qpat": "(\"cocoa butter\" OR \"Theobroma cacao\") AND (balm OR cosmetic)"}, {"name": "Bakuchiol", "products": "Sleeping Mask", "sci": "Psoralea corylifolia (sin. Cullen corylifolium)", "kw": "bakuchiol; retinol alternative; bakuchiol anti-aging", "actives": "bakuchiol (meroterpeno)", "prio": "Alta", "qpat": "bakuchiol AND (cosmetic OR \"anti-aging\" OR night)"}, {"name": "Marula", "products": "Suero Humectante Facial de Marula", "sci": "Sclerocarya birrea", "kw": "marula oil; Sclerocarya birrea kernel oil", "actives": "ácido oleico, tocoferoles, procianidinas", "prio": "Media", "qpat": "(\"marula oil\" OR \"Sclerocarya birrea\") AND cosmetic"}, {"name": "Aceite de Kalahari*", "products": "Serum Facial con Aceite de Kalahari", "sci": "Citrullus lanatus (melón de Kalahari)", "kw": "Kalahari melon seed oil", "actives": "ácido linoleico", "prio": "Media", "qpat": "(\"Kalahari melon\" OR \"Citrullus lanatus seed oil\") AND cosmetic"}, {"name": "Mongongo", "products": "Suero Corporal con Aceite de Mongongo", "sci": "Schinziophyton rautanenii", "kw": "mongongo oil; manketti oil", "actives": "ácido eleosteárico, vitamina E", "prio": "Media", "qpat": "(mongongo OR manketti OR \"Schinziophyton rautanenii\") AND (oil OR cosmetic)"}, {"name": "Jojoba y aloe", "products": "Maquillaje Líquido (Liquid Foundation)", "sci": "Simmondsia chinensis; Aloe barbadensis", "kw": "jojoba oil foundation; aloe vera makeup", "actives": "ésteres de cera, polisacáridos", "prio": "Media", "qpat": "(jojoba OR \"Simmondsia chinensis\") AND (aloe) AND (foundation OR makeup)"}, {"name": "Leche de cabra", "products": "Jabón Facial de Leche de Cabra", "sci": "—", "kw": "goat milk soap; goat milk skin barrier", "actives": "ácidos grasos, ácido láctico", "prio": "Baja", "qpat": "\"goat milk\" AND soap AND (skin OR facial)"}, {"name": "Carbón activado", "products": "Jabón Facial de Carbón Activado", "sci": "—", "kw": "activated charcoal cleanser; adsorption sebum", "actives": "carbono adsorbente", "prio": "Baja", "qpat": "\"activated charcoal\" AND (cleanser OR soap OR facial)"}], "tech": [{"name": "Extracción verde", "why": "Preservar activos de herbolaria con técnicas limpias", "kw": "green extraction; supercritical CO2; ultrasound-assisted extraction; cold-pressed; upcycled", "qpat": "(\"supercritical CO2\" OR \"ultrasound-assisted extraction\" OR \"green extraction\") AND cosmetic AND plant"}, {"name": "Conservación natural", "why": "Fórmulas sin conservadores sintéticos", "kw": "natural preservatives; preservative-free; hurdle technology; antimicrobial plant extracts", "qpat": "(\"natural preservative\" OR \"preservative-free\") AND cosmetic"}, {"name": "Clean / piel sensible", "why": "Claim central: sin fragancia, hipoalergénico", "kw": "fragrance-free; hypoallergenic; clean beauty; skin microbiome", "qpat": "(\"fragrance-free\" OR hypoallergenic OR microbiome) AND cosmetic AND (natural OR plant)"}, {"name": "Pigmentos minerales no-nano", "why": "Maquillaje con óxidos de hierro, mica, carmín (No Nano)", "kw": "mineral makeup; iron oxides; mica; non-nano pigments; natural colorants", "qpat": "(\"mineral makeup\" OR \"iron oxide\" OR mica) AND (foundation OR eyeliner) AND natural"}, {"name": "Formatos (bifásico, sólidos, jabón)", "why": "Limpiador bifásico, jabones, color sticks", "kw": "biphasic cleanser; solid cosmetics; waterless beauty; cold process soap", "qpat": "(\"biphasic\" OR \"two-phase\") AND (cleanser OR \"makeup remover\")"}, {"name": "Fermentación / postbióticos", "why": "Siguiente ola de activos naturales", "kw": "ferment filtrate; postbiotics skin; plant stem cells", "qpat": "(\"ferment filtrate\" OR postbiotic OR \"plant stem cell\") AND cosmetic"}, {"name": "Empaque sustentable", "why": "Empaques biodegradables y diseño mexicano", "kw": "biodegradable packaging; refillable cosmetics; life cycle assessment", "qpat": "(\"biodegradable\" OR refillable) AND (cosmetic container OR \"cosmetic packaging\")"}, {"name": "Herbolaria y conocimiento tradicional", "why": "Base de la propuesta de AHAL; riesgo y oportunidad de bioprospección", "kw": "ethnobotany cosmetics; Mexican medicinal plants; traditional knowledge; Nagoya Protocol", "qpat": "(\"Mexican\" AND (\"medicinal plant\" OR herbal)) AND cosmetic"}], "cpc": [{"code": "A61K 8/97", "covers": "Cosméticos con material vegetal o extractos", "products": "Casi todo el catálogo"}, {"code": "A61K 8/9789", "covers": "Extractos de dicotiledóneas", "products": "Tepezcohuite, cempasúchil, zapote, marula"}, {"code": "A61K 8/9794", "covers": "Extractos de monocotiledóneas", "products": "Aloe"}, {"code": "A61K 8/92 (8/922)", "covers": "Aceites, grasas y ceras vegetales", "products": "Marula, mongongo, Kalahari, jojoba, cacao"}, {"code": "A61K 8/98", "covers": "Materiales de origen animal", "products": "Miel, leche de cabra, carmín"}, {"code": "A61K 8/19", "covers": "Compuestos inorgánicos", "products": "Óxidos de hierro, mica, carbón"}, {"code": "A61Q 19/00 · 19/08 · 19/10", "covers": "Cuidado de la piel · antienvejecimiento · limpieza", "products": "Sueros, Sleeping Mask, limpiadores"}, {"code": "A61Q 1/02 · 1/04 · 1/10", "covers": "Maquillaje de piel · labios · ojos", "products": "Bases, labiales, delineadores"}, {"code": "A61Q 5/02", "covers": "Shampoos", "products": "Línea de cabello"}, {"code": "C11D 9/38", "covers": "Jabones con aditivos", "products": "Jabones faciales y corporales"}, {"code": "A61H 15/00", "covers": "Dispositivos de masaje", "products": "Gua sha"}]}, "bank": [{"title": "1. Competencia y benchmarking", "intro": "Estas preguntas ubican a AHAL frente a sus 14 competidores directos y 9 indirectos.", "qs": [{"n": 1, "q": "¿Qué competidores directos tienen el posicionamiento más parecido al de AHAL (herbolaria mexicana + ciencia) y en qué se diferencian?", "sub": "Posicionamiento", "a": "no"}, {"n": 2, "q": "¿Qué ingredientes mexicanos usan los competidores que AHAL todavía no usa?", "sub": "Posicionamiento", "a": "no"}, {"n": 3, "q": "¿Qué claims (cruelty-free, vegano, sin fragancia, orgánico, SPF) tienen los competidores y AHAL no comunica?", "sub": "Posicionamiento", "a": "no"}, {"n": 4, "q": "¿Qué competidor tiene el catálogo más amplio y en qué categorías supera a AHAL?", "sub": "Posicionamiento", "a": "no"}, {"n": 5, "q": "¿Cómo se compara el precio de referencia de AHAL con el promedio de los competidores directos, por categoría?", "sub": "Precio y canales", "a": "no"}, {"n": 6, "q": "¿Qué canales de venta usan los competidores (Ulta, Liverpool, Amazon, farmacias) donde AHAL no está?", "sub": "Precio y canales", "a": "no"}, {"n": 7, "q": "¿Qué competidores venden en Sephora y cómo se posicionan frente a AHAL en ese anaquel?", "sub": "Precio y canales", "a": "no"}, {"n": 8, "q": "¿Qué competidor indirecto masivo (como Yuya) podría bajar el precio de referencia de la categoría natural?", "sub": "Precio y canales", "a": "no"}, {"n": 9, "q": "¿Qué competidores de amenaza alta han lanzado productos nuevos o cambiado de marca recientemente?", "sub": "Amenazas competitivas", "a": "no"}, {"n": 10, "q": "¿Qué competidor tiene el puntaje ponderado más alto en la matriz de evaluación y en qué criterios le gana a AHAL?", "sub": "Amenazas competitivas", "a": "no"}, {"n": 11, "q": "¿Qué competidor compite directamente con el producto estrella de AHAL (Mask & Scrub de tepezcohuite, Suero Opuntia)?", "sub": "Amenazas competitivas", "a": "no"}, {"n": 12, "q": "¿En qué criterios de la matriz AHAL supera a todos los competidores y cómo puede comunicarlo?", "sub": "Oportunidades competitivas", "a": "no"}, {"n": 13, "q": "¿Qué categorías o segmentos (piel madura, embarazo, hombres, cabello) atienden pocos competidores?", "sub": "Oportunidades competitivas", "a": "no"}, {"n": 14, "q": "¿Qué competidores pequeños podrían ser aliados, distribuidores o adquisiciones en lugar de rivales?", "sub": "Oportunidades competitivas", "a": "no"}, {"n": 15, "q": "¿Qué debilidades comunes de los competidores (precio, disponibilidad, evidencia científica) puede aprovechar AHAL?", "sub": "Oportunidades competitivas", "a": "no"}]}, {"title": "2. Entorno político-legal y regulatorio", "intro": "Estas preguntas detectan cambios de reglas antes de que obliguen a reformular, reetiquetar o retirar productos.", "qs": [{"n": 16, "q": "¿Qué cambios recientes en el DOF, COFEPRIS o PROFECO afectan a cosméticos naturales, y cuáles tocan productos de AHAL?", "sub": null, "a": "no"}, {"n": 17, "q": "¿Hay proyectos de modificación a la NOM-141-SSA1/SCFI-2012 que cambien el etiquetado de AHAL?", "sub": null, "a": "no"}, {"n": 18, "q": "¿Qué alertas sanitarias de COFEPRIS involucran ingredientes o categorías que AHAL vende?", "sub": null, "a": "no"}, {"n": 19, "q": "¿Qué ingredientes de las fórmulas de AHAL están restringidos o en revisión en la base CosIng de la Unión Europea?", "sub": null, "a": "no"}, {"n": 20, "q": "¿Qué claims de AHAL (natural, limpio, hipoalergénico, sin químicos) podrían considerarse publicidad engañosa según PROFECO?", "sub": null, "a": "no"}, {"n": 21, "q": "¿Qué competidores han sido sancionados o alertados, y qué aprendizaje deja para AHAL?", "sub": null, "a": "no"}, {"n": 22, "q": "¿Qué requisitos tendría AHAL para exportar a EE. UU. (FDA, MoCRA) y cuáles ya cumple?", "sub": null, "a": "no"}, {"n": 23, "q": "¿Qué obligaciones derivan del Protocolo de Nagoya para usar plantas y conocimiento tradicional mexicano?", "sub": null, "a": "no"}, {"n": 24, "q": "¿Qué marcas nuevas en clase 3 registradas ante el IMPI podrían confundirse con AHAL o anticipar competidores?", "sub": null, "a": "no"}, {"n": 25, "q": "¿Qué cambio regulatorio convertiría una exigencia en ventaja para AHAL (por ejemplo, prohibir un ingrediente sintético que AHAL no usa)?", "sub": null, "a": "no"}, {"n": 26, "q": "¿Qué tratados o aranceles afectan el costo de los ingredientes importados (marula, mongongo, Kalahari)?", "sub": null, "a": "no"}, {"n": 27, "q": "¿Qué temas regulatorios tienen más hallazgos sin atender en la bitácora?", "sub": null, "a": "no"}]}, {"title": "3. Entorno económico y de mercado", "intro": "Estas preguntas miden si el mercado crece para AHAL y qué presiona sus costos y precios.", "qs": [{"n": 28, "q": "¿Cómo ha crecido el mercado de cosméticos en México y qué parte corresponde a cosmética natural o clean?", "sub": null, "a": "no"}, {"n": 29, "q": "¿Qué dicen la inflación y el gasto de los hogares sobre la disposición a pagar por cosmética premium?", "sub": null, "a": "no"}, {"n": 30, "q": "¿Cómo afecta el tipo de cambio al costo de los ingredientes importados de AHAL?", "sub": null, "a": "no"}, {"n": 31, "q": "¿Qué estados o países son los principales destinos de exportación de cosméticos mexicanos, y cuál conviene explorar primero?", "sub": null, "a": "no"}, {"n": 32, "q": "¿Cómo crece la venta en línea de belleza en México, y en qué temporadas (Hot Sale, Buen Fin) se concentra?", "sub": null, "a": "no"}, {"n": 33, "q": "¿Qué inversiones, fusiones o adquisiciones recientes hay en clean beauty en México y Latinoamérica?", "sub": null, "a": "no"}, {"n": 34, "q": "¿Qué rango de precio concentra más competidores, y existe un hueco de precio que AHAL pueda ocupar?", "sub": null, "a": "no"}, {"n": 35, "q": "¿Qué señales económicas anticipan una caída en el gasto de belleza premium?", "sub": null, "a": "no"}, {"n": 36, "q": "¿Qué retailers abren tiendas o categorías nuevas de belleza natural en México?", "sub": null, "a": "no"}, {"n": 37, "q": "¿Qué programas de financiamiento o apoyo a pymes y mujeres emprendedoras podría aprovechar AHAL?", "sub": null, "a": "no"}]}, {"title": "4. Entorno social y del consumidor", "intro": "Estas preguntas siguen qué busca, teme y valora el consumidor de cosmética natural.", "qs": [{"n": 38, "q": "¿Qué términos de búsqueda sobre skincare natural crecen más en Google Trends México, y cuáles coinciden con productos de AHAL?", "sub": null, "a": "no"}, {"n": 39, "q": "¿Qué ingredientes de moda (bakuchiol, niacinamida, péptidos, ceramidas) piden los consumidores, y cuáles podría integrar AHAL con un equivalente natural?", "sub": null, "a": "no"}, {"n": 40, "q": "¿Qué quejas aparecen con más frecuencia en reseñas de competidores (Amazon, Sephora, Liverpool), y AHAL las resuelve?", "sub": null, "a": "no"}, {"n": 41, "q": "¿Qué dicen las reseñas sobre AHAL: qué elogian y qué critican?", "sub": null, "a": "no"}, {"n": 42, "q": "¿Qué segmentos emergentes (hombres, piel madura, adolescentes, embarazo, piel morena) están poco atendidos?", "sub": null, "a": "no"}, {"n": 43, "q": "¿Qué tan fuerte es la tendencia de \"orgullo mexicano\" en belleza y cómo la usan los competidores?", "sub": null, "a": "no"}, {"n": 44, "q": "¿Qué escándalos de seguridad cosmética (mercurio, falsificaciones) aumentan la desconfianza, y cómo se convierte eso en ventaja para AHAL?", "sub": null, "a": "no"}, {"n": 45, "q": "¿Qué mensajes y ofertas usan los competidores en sus anuncios activos (Biblioteca de anuncios de Meta)?", "sub": null, "a": "no"}, {"n": 46, "q": "¿Qué influencers o creadores hablan de clean beauty mexicana, y con qué marcas colaboran?", "sub": null, "a": "no"}, {"n": 47, "q": "¿Qué rituales o tendencias de rutina (skin minimalism, skinimalism, body care) crecen, y AHAL tiene producto para ellas?", "sub": null, "a": "no"}, {"n": 48, "q": "¿Qué preocupaciones sobre lo \"natural\" (alergias, eficacia, greenwashing) aparecen, y cómo responder con evidencia?", "sub": null, "a": "no"}, {"n": 49, "q": "¿Qué cambios en los hábitos de compra (en línea, suscripción, recarga) puede aprovechar AHAL?", "sub": null, "a": "no"}]}, {"title": "5. Ecológico, abastecimiento y certificaciones", "intro": "Estas preguntas cuidan que los ingredientes sigan disponibles y que el discurso sustentable de AHAL sea comprobable.", "qs": [{"n": 50, "q": "¿Alguna planta del catálogo (tepezcohuite, cempasúchil, zapote negro, tuna) tiene un estatus de conservación o un permiso de aprovechamiento que la haga riesgosa?", "sub": null, "a": "no"}, {"n": 51, "q": "¿Qué riesgos climáticos o de plagas pueden afectar el abasto de los ingredientes mexicanos de AHAL?", "sub": null, "a": "no"}, {"n": 52, "q": "¿Cómo está la población de abejas meliponas y qué riesgo implica para los jabones de miel melipona?", "sub": null, "a": "no"}, {"n": 53, "q": "¿Qué proveedores alternativos existen para cada ingrediente crítico?", "sub": null, "a": "no"}, {"n": 54, "q": "¿Qué normas sobre residuos y empaques podrían obligar a cambiar el empaque de AHAL?", "sub": null, "a": "no"}, {"n": 55, "q": "¿Qué certificaciones (Leaping Bunny, COSMOS, vegano) tienen los competidores y AHAL no, y cuánto costaría obtenerlas?", "sub": null, "a": "no"}, {"n": 56, "q": "¿Qué innovaciones en empaque biodegradable o recargable usan los competidores?", "sub": null, "a": "no"}, {"n": 57, "q": "¿Qué claims ambientales de AHAL podrían calificarse como greenwashing sin respaldo?", "sub": null, "a": "no"}, {"n": 58, "q": "¿Qué programas de comercio justo o trazabilidad con productores mexicanos podrían reforzar la marca?", "sub": null, "a": "no"}, {"n": 59, "q": "¿Qué ingredientes son subproductos (upcycled) de otras industrias mexicanas y podrían ser nuevos activos?", "sub": null, "a": "no"}]}, {"title": "6. Vigilancia tecnológica: patentes", "intro": "Estas preguntas separan las patentes que bloquean de las que liberan tecnología. Exige siempre número, país y estatus legal.", "qs": [{"n": 60, "q": "¿Quién patenta más sobre cada ingrediente del catálogo, y cómo ha evolucionado el número de patentes por año?", "sub": "Panorama", "a": "si"}, {"n": 61, "q": "¿En qué países se concentran las patentes sobre plantas mexicanas en cosmética?", "sub": "Panorama", "a": "si"}, {"n": 62, "q": "¿Qué códigos CPC concentran más patentes relacionadas con AHAL, y cuáles crecen más rápido?", "sub": "Panorama", "a": "si"}, {"n": 63, "q": "¿Qué universidades o centros de investigación mexicanos patentan en estos temas y podrían ser aliados o licenciantes?", "sub": "Panorama", "a": "si"}, {"n": 64, "q": "¿Qué patentes con situación \"Protegida\" en México tienen reivindicaciones cercanas a un producto actual de AHAL?", "sub": "Amenazas", "a": "si"}, {"n": 65, "q": "¿Qué solicitudes \"En trámite\" podrían bloquear un producto que AHAL planea lanzar?", "sub": "Amenazas", "a": "si"}, {"n": 66, "q": "¿Qué patentes vigentes en EE. UU. o Europa afectarían si AHAL exporta?", "sub": "Amenazas", "a": "si"}, {"n": 67, "q": "¿Qué grandes empresas de cosmética están patentando extractos de plantas mexicanas?", "sub": "Amenazas", "a": "si"}, {"n": 68, "q": "¿Hay patentes extranjeras sobre plantas mexicanas que se basen en conocimiento tradicional sin reconocerlo?", "sub": "Amenazas", "a": "si"}, {"n": 69, "q": "¿Qué patentes relevantes están \"Libres\" (caducadas, expiradas o abandonadas) y qué tecnología permiten usar hoy?", "sub": "Oportunidades", "a": "si"}, {"n": 70, "q": "¿Qué patentes \"Se liberan pronto\" (3 años o menos) y qué producto podría preparar AHAL para ese momento?", "sub": "Oportunidades", "a": "si"}, {"n": 71, "q": "¿Qué patentes extranjeras no se presentaron en México y, por lo tanto, AHAL puede usar aquí?", "sub": "Oportunidades", "a": "si"}, {"n": 72, "q": "¿Qué ingredientes del catálogo casi no tienen patentes y son espacios libres para innovar?", "sub": "Oportunidades", "a": "si"}, {"n": 73, "q": "¿Qué métodos de extracción o conservación patentados resolverían un problema técnico de AHAL?", "sub": "Oportunidades", "a": "si"}, {"n": 74, "q": "¿Qué combinaciones de ingredientes aparecen en patentes y AHAL podría explorar sin infringir?", "sub": "Oportunidades", "a": "si"}, {"n": 75, "q": "¿Hay algo en las fórmulas o procesos de AHAL que parezca novedoso y valga la pena proteger?", "sub": "Oportunidades", "a": "si"}, {"n": 76, "q": "¿Qué patentes del registro tienen el estatus sin verificar hace más de 90 días?", "sub": "Control de calidad", "a": "parcial"}, {"n": 77, "q": "¿Qué patentes tienen solo la expiración estimada, y cuál es su fecha oficial?", "sub": "Control de calidad", "a": "parcial"}]}, {"title": "7. Vigilancia tecnológica: ciencia", "intro": "Estas preguntas convierten artículos científicos en evidencia para claims, en alertas de seguridad y en ideas de producto. Exige siempre el DOI.", "qs": [{"n": 78, "q": "¿Qué estudios respaldan los beneficios que AHAL comunica de cada ingrediente (regeneración del tepezcohuite, antioxidante del zapote negro, antimicrobiano de la miel melipona)?", "sub": "Evidencia para AHAL", "a": "no"}, {"n": 79, "q": "¿Cuáles de esos estudios son clínicos en humanos y cuáles solo in vitro o en animales?", "sub": "Evidencia para AHAL", "a": "no"}, {"n": 80, "q": "¿Qué claims de AHAL no tienen evidencia científica publicada y conviene suavizar o respaldar con un estudio propio?", "sub": "Evidencia para AHAL", "a": "no"}, {"n": 81, "q": "¿Qué estudios comparan bakuchiol con retinol, y qué concentraciones usan?", "sub": "Evidencia para AHAL", "a": "no"}, {"n": 82, "q": "¿Qué estudios reportan irritación, alergia, fototoxicidad o contaminación en ingredientes que usa AHAL?", "sub": "Amenazas", "a": "no"}, {"n": 83, "q": "¿Qué evidencia nueva podría restar valor a un ingrediente de moda del catálogo?", "sub": "Amenazas", "a": "no"}, {"n": 84, "q": "¿Qué estudios sobre carmín o pigmentos minerales podrían anticipar restricciones regulatorias?", "sub": "Amenazas", "a": "no"}, {"n": 85, "q": "¿Qué plantas mexicanas con efectos en la piel aparecen en estudios recientes y aún no se usan comercialmente?", "sub": "Oportunidades", "a": "no"}, {"n": 86, "q": "¿Qué técnicas de extracción verde mejoran el rendimiento o la estabilidad de los activos de AHAL?", "sub": "Oportunidades", "a": "no"}, {"n": 87, "q": "¿Qué grupos de investigación en México estudian estos ingredientes y podrían colaborar con AHAL (servicio social, tesis, proyectos con la UAEH)?", "sub": "Oportunidades", "a": "no"}, {"n": 88, "q": "¿Qué hallazgos sobre microbioma de la piel, fermentación o postbióticos podrían aplicarse a ingredientes mexicanos?", "sub": "Oportunidades", "a": "no"}, {"n": 89, "q": "¿Qué artículos citan patentes del registro, y qué revela eso sobre el paso de la ciencia al producto?", "sub": "Oportunidades", "a": "parcial"}]}, {"title": "8. Síntesis: FODA, priorización y decisiones", "intro": "Estas preguntas cruzan todas las hojas para convertir hallazgos sueltos en decisiones.", "qs": [{"n": 90, "q": "Con toda la información cargada, arma el FODA de AHAL y cita la evidencia de cada punto.", "sub": "FODA y priorización", "a": "parcial"}, {"n": 91, "q": "¿Cuáles son las 5 oportunidades y las 5 amenazas de mayor prioridad, ordenadas por impacto × probabilidad?", "sub": "FODA y priorización", "a": "parcial"}, {"n": 92, "q": "¿Qué amenazas aparecen en más de una dimensión a la vez (por ejemplo, una patente vigente + un competidor + un cambio regulatorio)?", "sub": "FODA y priorización", "a": "parcial"}, {"n": 93, "q": "¿Qué oportunidades combinan un ingrediente libre de patentes, evidencia científica y demanda del consumidor?", "sub": "FODA y priorización", "a": "parcial"}, {"n": 94, "q": "¿Qué hallazgos de alta prioridad siguen pendientes en la bitácora o el registro?", "sub": "FODA y priorización", "a": "parcial"}, {"n": 95, "q": "¿Qué fortaleza de AHAL sirve para aprovechar cada oportunidad prioritaria (estrategias FO)?", "sub": "Estrategias cruzadas", "a": "parcial"}, {"n": 96, "q": "¿Qué fortaleza ayuda a neutralizar cada amenaza prioritaria (estrategias FA)?", "sub": "Estrategias cruzadas", "a": "parcial"}, {"n": 97, "q": "¿Qué debilidad impide aprovechar una oportunidad, y cómo corregirla (estrategias DO)?", "sub": "Estrategias cruzadas", "a": "parcial"}, {"n": 98, "q": "¿Qué combinación de debilidad y amenaza es el mayor riesgo para AHAL (estrategias DA)?", "sub": "Estrategias cruzadas", "a": "parcial"}, {"n": 99, "q": "Si un competidor de amenaza alta baja su precio 20 %, ¿qué productos de AHAL quedan más expuestos?", "sub": "Escenarios y decisiones", "a": "parcial"}, {"n": 100, "q": "Si AHAL quiere lanzar un producto nuevo en 12 meses, ¿qué ingrediente, formato y canal recomiendan los datos, y con qué riesgos de patente?", "sub": "Escenarios y decisiones", "a": "parcial"}, {"n": 101, "q": "¿Qué tres acciones debería priorizar AHAL este trimestre según toda la vigilancia, y qué indicador mide cada una?", "sub": "Escenarios y decisiones", "a": "parcial"}, {"n": 102, "q": "¿Qué cambió desde la revisión anterior: qué oportunidades o amenazas son nuevas y cuáles desaparecieron?", "sub": "Escenarios y decisiones", "a": "parcial"}]}, {"title": "9. Mantenimiento del cerebro", "intro": "Estas preguntas revisan que el cerebro tenga información completa y vigente antes de confiar en sus respuestas.", "qs": [{"n": 103, "q": "¿Qué competidores tienen datos incompletos (sin web, sin precio, sin canales) en la hoja Competidores?", "sub": null, "a": "no"}, {"n": 104, "q": "¿Qué fuentes de vigilancia tienen la revisión vencida o nunca se han revisado?", "sub": null, "a": "no"}, {"n": 105, "q": "¿Qué ingredientes del catálogo no tienen ninguna patente ni artículo registrado todavía?", "sub": null, "a": "si"}, {"n": 106, "q": "¿Qué hallazgos de la bitácora no tienen fuente o link?", "sub": null, "a": "no"}, {"n": 107, "q": "¿Qué datos tienen más de un año y deberían actualizarse?", "sub": null, "a": "no"}, {"n": 108, "q": "¿Qué afirmaciones del cerebro se contradicen entre hojas (por ejemplo, un estatus legal distinto para la misma patente)?", "sub": null, "a": "parcial"}, {"n": 109, "q": "¿Qué productos nuevos de AHAL faltan en la hoja de vigilancia tecnológica?", "sub": null, "a": "no"}, {"n": 110, "q": "¿Qué preguntas de este banco no pudo responder el cerebro, y qué información hay que agregar para que pueda hacerlo?", "sub": null, "a": "si"}]}, {"title": "10. Cerebro de patentes", "intro": "Preguntas del documento 'cerebro de VT', pensadas para el registro de patentes.", "qs": [{"n": "P1", "q": "¿Quién patenta más sobre extractos de plantas mexicanas en cosmética?", "sub": "Panorama del sector", "a": "si"}, {"n": "P2", "q": "¿Cómo ha evolucionado por año el número de patentes sobre bakuchiol o aceite de tuna?", "sub": "Panorama del sector", "a": "si"}, {"n": "P3", "q": "¿En qué países se concentran las patentes sobre Tagetes erecta en cuidado de la piel?", "sub": "Panorama del sector", "a": "si"}, {"n": "P4", "q": "¿Qué universidades o centros mexicanos patentan en este tema y podrían ser aliados?", "sub": "Panorama del sector", "a": "si"}, {"n": "P5", "q": "¿Qué patentes vigentes en México reivindican un uso de Mimosa tenuiflora parecido a la Mask & Scrub?", "sub": "Amenazas y libertad de operación", "a": "si"}, {"n": "P6", "q": "¿Alguna patente vigente protege combinar bakuchiol con un extracto frutal en una mascarilla de noche?", "sub": "Amenazas y libertad de operación", "a": "si"}, {"n": "P7", "q": "¿Qué patentes vigentes podrían afectar si AHAL exporta su suero de Opuntia a EE. UU.?", "sub": "Amenazas y libertad de operación", "a": "si"}, {"n": "P8", "q": "¿Qué competidores han presentado solicitudes recientes sobre ingredientes que AHAL usa?", "sub": "Amenazas y libertad de operación", "a": "si"}, {"n": "P9", "q": "¿Qué patentes sobre extracción de aceites de semilla ya expiraron o caducaron y se pueden usar libremente?", "sub": "Oportunidades", "a": "si"}, {"n": "P10", "q": "¿Qué tecnologías relevantes vencen en los próximos 3 años?", "sub": "Oportunidades", "a": "si"}, {"n": "P11", "q": "¿Qué ingredientes de la herbolaria mexicana casi no tienen patentes y son espacios libres para innovar?", "sub": "Oportunidades", "a": "si"}, {"n": "P12", "q": "¿Qué patentes extranjeras no se presentaron en México y, por lo tanto, AHAL puede usar aquí?", "sub": "Oportunidades", "a": "si"}, {"n": "P13", "q": "¿Qué está patentando un competidor o una gran marca de cosmética natural, y qué revela eso de su próximo lanzamiento?", "sub": "Inteligencia competitiva", "a": "si"}, {"n": "P14", "q": "¿Qué inventores aparecen con más frecuencia y en qué empresas trabajan?", "sub": "Inteligencia competitiva", "a": "si"}, {"n": "P15", "q": "¿Qué métodos de extracción patentados mejoran la estabilidad de la luteína del cempasúchil?", "sub": "Desarrollo de producto", "a": "si"}, {"n": "P16", "q": "¿Qué sistemas de conservación natural patentados funcionan con miel?", "sub": "Desarrollo de producto", "a": "si"}, {"n": "P17", "q": "¿Qué combinaciones de ingredientes con efecto sinérgico aparecen en patentes de antienvejecimiento natural?", "sub": "Desarrollo de producto", "a": "si"}, {"n": "P18", "q": "¿Hay algo en las fórmulas de AHAL que parezca novedoso frente a lo ya patentado y valga la pena proteger?", "sub": "Propiedad intelectual de AHAL", "a": "si"}, {"n": "P19", "q": "¿Hay patentes extranjeras sobre plantas mexicanas que deriven de conocimiento tradicional? Eso puede ser un riesgo reputacional o legal, y también un argumento de marca para AHAL.", "sub": "Propiedad intelectual de AHAL", "a": "si"}]}]};
+const TODAY = new Date("2026-11-06");
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = n => n.toLocaleString("es-MX");
+
+/* ---------- reglas del cerebro: estatus para AHAL ---------- */
+function addMonths(iso, m){ if(!iso) return null; const d=new Date(iso); d.setMonth(d.getMonth()+m); return d; }
+function situ(p){
+  const s=(p.status||"").toUpperCase(), granted=/granted/i.test(p.type||"");
+  if(s==="EXPIRED") return {code:"libre", label:"Expirada · libre", tone:"opp"};
+  if(s==="DISCONTINUED"||s==="INACTIVE"||s==="CEASED"||s==="REVOKED"||s==="WITHDRAWN") return {code:"libre", label:"Abandonada · libre", tone:"opp"};
+  if(p.j==="WO"){
+    const end=addMonths(p.prio,30);
+    if(end && end<TODAY) return {code:"wo", label:"WO · fase internacional concluida", tone:"noise"};
+    return {code:"tram", label:"WO · en fase internacional", tone:"signal"};
+  }
+  if(s==="ACTIVE" && granted) return {code:"vig", label:"Concedida y vigente", tone:"threat"};
+  if(s==="ACTIVE"||s==="PENDING") return {code:"tram", label:"Solicitud en trámite", tone:"signal"};
+  return {code:"otro", label:s||"Sin estatus", tone:"noise"};
+}
+const inMX = p => (p.famJ||[]).includes("MX") || p.j==="MX";
+function expEst(p){ if(p.j==="WO"||!p.app) return null; return new Date(p.app).getFullYear()+20; }
+
+/* ---------- afinidad automática con el catálogo AHAL ---------- */
+const ING = {
+  "Tepezcohuite":["mimosa tenuiflora","tepezcohuite","mimosa hostilis"],
+  "Cempasúchil":["tagetes","marigold","lutein"],
+  "Tuna / Opuntia":["opuntia","prickly pear","cactus"],
+  "Miel melipona / maya":["melipona","stingless bee","honey"],
+  "Zapote negro":["diospyros","black sapote","sapote"],
+  "Carmín (cochinilla)":["carmine","cochineal","carminic","dactylopius"],
+  "Cacao":["cocoa","cacao","theobroma"],
+  "Bakuchiol":["bakuchiol","psoralea","cullen corylifol"],
+  "Marula":["marula","sclerocarya"],
+  "Aceite de Kalahari":["kalahari","citrullus lanatus"],
+  "Mongongo":["mongongo","manketti","schinziophyton"],
+  "Jojoba y aloe":["jojoba","simmondsia","aloe"],
+  "Leche de cabra":["goat milk","goat's milk"],
+  "Carbón activado":["activated charcoal","activated carbon"]
+};
+const TEC = {
+  "Extracción verde":["supercritical","ultrasound-assisted","green extraction","cold-pressed","cold pressed","upcycl"],
+  "Conservación natural":["preservative","antimicrobial","antibacterial","polylysine"],
+  "Clean / piel sensible":["fragrance-free","hypoallergenic","microbiome","sensitive skin","skin resident"],
+  "Pigmentos minerales":["mineral makeup","iron oxide","mica","pigment"],
+  "Formatos":["biphasic","two-phase","solid cosmetic","waterless","soap"],
+  "Fermentación / postbióticos":["ferment","postbiotic","lactic acid bacteri","probiotic","stem cell"],
+  "Empaque sustentable":["biodegradable","refillable","packaging"],
+  "Herbolaria":["plant extract","herbal","medicinal plant","ethnobotan","plant derived","plant-derived"]
+};
+function autoScore(p){
+  const t=(p.title+" "+p.abs).toLowerCase(), hits=[];
+  let s=0, ni=0, nt=0;
+  for(const [k,ws] of Object.entries(ING)) if(ws.some(w=>t.includes(w))){ hits.push(k); if(ni<2){s+=30;ni++;} }
+  for(const [k,ws] of Object.entries(TEC)) if(ws.some(w=>t.includes(w))){ hits.push(k); if(nt<2){s+=14;nt++;} }
+  const c=p.cpc||[];
+  if(c.some(x=>/^A61K8\//.test(x)||/^A61Q/.test(x))) s+=25;
+  else if(c.some(x=>/^C11D9/.test(x))) s+=15;
+  if(c.some(x=>/^A61K36\//.test(x))) s+=5;
+  if(c.length && c.every(x=>/^(A23|A24|C12Q|H05H|A61P31|C07K)/.test(x)||/^A61K(9|38|45)\//.test(x))) s-=10;
+  if(situ(p).code==="libre") s+=6;
+  return {score:Math.max(0,Math.min(100,s)), hits};
+}
+
+/* ---------- estado ---------- */
+let S = { patents:[], fams:[], source:null, custom:false };
+function loadBase(){
+  S.patents = DATA.patents.map(p=>({...p}));
+  S.fams = DATA.families.map(f=>({...f, curated:true}));
+  S.source = DATA.source; S.custom=false;
+  finalize();
+}
+function finalize(){
+  LAYOUT=null;
+  for(const p of S.patents){ p.si=situ(p); p.auto=autoScore(p); p.exp=expEst(p); p.mx=inMX(p); }
+  const byId=Object.fromEntries(S.fams.map(f=>[f.id,f]));
+  for(const f of S.fams){
+    f.items=S.patents.filter(p=>p.fam===f.id);
+    f.vig=f.items.filter(p=>p.si.code==="vig").length;
+    f.libre=f.items.filter(p=>p.si.code==="libre").length;
+    f.jur=[...new Set(f.items.flatMap(p=>p.famJ.length?p.famJ:[p.j]))];
+    f.cited=Math.max(0,...f.items.map(p=>p.citedBy));
+  }
+  for(const p of S.patents){ p.famObj=byId[p.fam]; }
+  $("#srcName").textContent=S.source.file;
+  $("#srcCount").textContent=`${S.patents.length} documentos · ${S.fams.length} familias`;
+  $("#resetBtn").hidden=!S.custom;
+  renderAll();
+}
+const toneOfKind = k => /^Oportunidad/.test(k)?"opp":/^Amenaza/.test(k)?"threat":/^Señal/.test(k)?"signal":"noise";
+
+/* ---------- vista: oportunidades ---------- */
+let famFilter="Todas";
+function renderOpp(){
+  const el=$("#v-oportunidades"), P=S.patents, F=S.fams;
+  const nOpp=F.filter(f=>/^Oportunidad/.test(f.kind)).length;
+  const nVig=P.filter(p=>p.si.code==="vig").length;
+  const nLibre=P.filter(p=>p.si.code==="libre").length;
+  const nMX=P.filter(p=>p.mx).length;
+  const ingHits=P.filter(p=>p.auto.hits.some(h=>h in ING)).length;
+  const kinds=["Todas","Oportunidad","Amenaza fuera de México","Señal","Ruido"];
+  const list=[...F].sort((a,b)=>b.score-a.score).filter(f=>famFilter==="Todas"||f.kind===famFilter);
+  el.innerHTML=`
+  <div class="kpis">
+    <div class="kpi"><span class="v">${P.length}</span><span class="l">documentos en ${F.length} familias</span></div>
+    <div class="kpi"><span class="v" style="color:var(--opp)">${nOpp}</span><span class="l">familias con oportunidad</span></div>
+    <div class="kpi"><span class="v">${nLibre}</span><span class="l">documentos libres (expirados o abandonados)</span></div>
+    <div class="kpi"><span class="v" style="color:var(--threat)">${nVig}</span><span class="l">patentes concedidas y vigentes</span></div>
+    <div class="kpi"><span class="v">${nMX}</span><span class="l">con familia presentada en México</span></div>
+  </div>
+  ${S.custom?"":`<div class="callout">
+    <h3>Lectura rápida de vigilancia-1</h3>
+    <p><b>Solo ${ingHits} de ${P.length} documentos menciona un ingrediente del catálogo AHAL</b>, y es un falso positivo (una bebida china con Psoralea y Diospyros kaki). La pesquisa trae sobre todo farmacia, dispositivos y tabaco. Aun así hay <b>cuatro tecnologías aprovechables</b>: antiproteasas vegetales, extracto concentrado en polvo y conservador con ε-polilisina (las tres libres) y un postbiótico para el microbioma sin familia en México, más una idea para la línea de cabello. <b>Ninguna familia se presentó en México</b>, así que nada de lo que aparece impide fabricar o vender aquí. Revisa la pestaña Calidad para afinar la query.</p>
+  </div>`}
+  <div class="row-head">
+    <div><h2>Familias de patentes por afinidad con AHAL</h2>
+    <p>${S.custom?"Lectura automática: puntaje por ingredientes y tecnologías del catálogo, códigos CPC cosméticos y estatus.":"Puntaje y lectura del análisis inicial; son hipótesis para validar en la fuente original y con un agente de patentes."}</p></div>
+    <div class="chips" role="group" aria-label="Filtrar por tipo">${kinds.map(k=>`<button class="chip" data-k="${esc(k)}" aria-pressed="${famFilter===k}">${esc(k)}</button>`).join("")}</div>
+  </div>
+  <div class="fams">${list.map(famCard).join("")||`<div class="empty">No hay familias de este tipo.</div>`}</div>`;
+  el.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{famFilter=b.dataset.k;renderOpp();});
+  el.querySelectorAll(".doclink").forEach(b=>b.onclick=()=>openDoc(+b.dataset.n));
+  el.querySelectorAll(".fam-ask").forEach(b=>b.onclick=()=>askAbout(b.dataset.f));
+}
+function famCard(f){
+  const tone=toneOfKind(f.kind), col=`var(--${tone})`;
+  return `<article class="fam">
+    <div class="fam-top">
+      <div class="score" style="--s:${f.score};--c:${col}" title="Afinidad con AHAL (0-100)"><span>${f.score}</span></div>
+      <div style="min-width:0"><h3>${esc(f.name)}</h3><div class="holder">${esc(f.holder)}</div></div>
+    </div>
+    <div class="chips"><span class="pill t-${tone}">${esc(f.kind)}</span><span class="pill t-acc">Relevancia ${esc(f.rel)}</span>${f.curated?"":`<span class="pill t-noise">Lectura automática</span>`}</div>
+    <p>${esc(f.tech)}</p>
+    <dl class="kv">
+      ${f.lines&&f.lines.length?`<dt>Línea AHAL</dt><dd>${esc(f.lines.join(" · "))}</dd>`:""}
+      <dt>Estatus</dt><dd>${esc(f.status)}</dd>
+      <dt>Países</dt><dd class="mono">${esc(f.jur.join(" · "))}</dd>
+    </dl>
+    <div class="action"><b>Acción propuesta</b>${esc(f.action)}</div>
+    <div class="fam-foot">${f.items.slice(0,8).map(p=>`<button class="doclink" data-n="${p.n}" title="${esc(p.si.label)}">${esc(p.key)}</button>`).join(" ")}${f.items.length>8?`<span class="mono" style="color:var(--muted)">+${f.items.length-8}</span>`:""}
+      <button class="btn fam-ask" data-f="${f.id}">Preguntar al cerebro</button></div>
+  </article>`;
+}
+
+/* ---------- vista: explorador ---------- */
+let X={q:"",st:"",j:"",kind:"",sort:"aff",open:null};
+function renderExp(){
+  const el=$("#v-explorador");
+  if(!el.dataset.ready){
+    el.innerHTML=`<div class="row-head"><div><h2>Explorador de patentes</h2><p>Haz clic en una fila para ver resumen, CPC, titulares y la lectura para AHAL.</p></div></div>
+    <div class="filters">
+      <input type="search" id="xq" placeholder="Buscar en título, resumen, titular o número…" aria-label="Buscar">
+      <select id="xst" aria-label="Estatus para AHAL"><option value="">Todo estatus</option><option value="libre">Libre (expirada o abandonada)</option><option value="vig">Concedida y vigente</option><option value="tram">Solicitud en trámite</option><option value="wo">WO concluida</option></select>
+      <select id="xj" aria-label="Oficina"></select>
+      <select id="xk" aria-label="Tipo"><option value="">Todo tipo</option><option>Oportunidad</option><option>Amenaza fuera de México</option><option>Señal</option><option>Ruido</option></select>
+      <select id="xs" aria-label="Orden"><option value="aff">Orden: afinidad</option><option value="year">Orden: más recientes</option><option value="cited">Orden: más citadas</option><option value="n">Orden: # original</option></select>
+    </div>
+    <div class="mapcard">
+      <div class="map-h">
+        <h3>Mapa de similitud</h3>
+        <span class="spacer"></span>
+        <label for="mc" class="map-note">Color por</label>
+        <select id="mc"><option value="kind">Tipo de hallazgo</option><option value="st">Estatus para AHAL</option><option value="fam">Familia</option><option value="gx" disabled>Cluster de Graphext</option></select>
+        <a class="btn primary" id="gxOpen" target="_blank" rel="noopener" hidden>Abrir en Graphext</a>
+        <button class="btn" id="gxCfg">Enlazar Graphext</button>
+      </div>
+      <div class="gx" id="gxPanel" hidden>
+        <input id="gxUrl" type="url" placeholder="Pega el enlace de tu proyecto en Graphext (https://…)" aria-label="Enlace de Graphext">
+        <button class="btn" id="gxSave">Guardar enlace</button>
+        <label class="btn" for="gxCsv" style="cursor:pointer">Importar coordenadas (CSV)</label>
+        <input id="gxCsv" type="file" accept=".csv,text/csv" hidden>
+        <button class="btn" id="gxClear" hidden>Quitar coordenadas</button>
+        <p class="map-note" style="flex-basis:100%">Para usar la disposición de Graphext, exporta un CSV con las columnas <span class="mono">Lens ID</span>, <span class="mono">x</span>, <span class="mono">y</span> y, si quieres, <span class="mono">cluster</span>.</p>
+      </div>
+      <div class="mapbox" id="mapbox"></div>
+      <div class="maplegend" id="mapLeg"></div>
+      <p class="map-note" id="mapNote"></p>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Número</th><th>Título y titular</th><th>Año</th><th>Estatus para AHAL</th><th>Afinidad</th><th>Citada</th></tr></thead><tbody id="xb"></tbody></table></div>`;
+    el.dataset.ready=1;
+    $("#xq").oninput=e=>{X.q=e.target.value.toLowerCase();drawRows();};
+    $("#xst").onchange=e=>{X.st=e.target.value;drawRows();};
+    $("#xj").onchange=e=>{X.j=e.target.value;drawRows();};
+    $("#xk").onchange=e=>{X.kind=e.target.value;drawRows();};
+    $("#xs").onchange=e=>{X.sort=e.target.value;drawRows();};
+    initMapControls();
+  }
+  const js=[...new Set(S.patents.map(p=>p.j))].sort();
+  $("#xj").innerHTML=`<option value="">Toda oficina</option>`+js.map(j=>`<option ${X.j===j?"selected":""}>${j}</option>`).join("");
+  drawRows();
+}
+const aff = p => p.famObj?.curated ? p.famObj.score : p.auto.score;
+function matches(p){
+  if(X.st && p.si.code!==X.st) return false;
+  if(X.j && p.j!==X.j) return false;
+  if(X.kind && p.famObj?.kind!==X.kind) return false;
+  if(X.q){ const h=(p.key+" "+p.title+" "+p.abs+" "+p.applicants.join(" ")+" "+p.owners.join(" ")).toLowerCase(); if(!h.includes(X.q)) return false; }
+  return true;
+}
+function drawRows(){
+  drawMap();
+  let rows=S.patents.filter(matches);
+  const so={aff:(a,b)=>aff(b)-aff(a)||b.year-a.year,year:(a,b)=>b.year-a.year,cited:(a,b)=>b.citedBy-a.citedBy,n:(a,b)=>a.n-b.n}[X.sort];
+  rows.sort(so);
+  $("#xb").innerHTML=rows.map(p=>{
+    const open=X.open===p.n, a=aff(p);
+    return `<tr class="r" data-n="${p.n}" aria-expanded="${open}" tabindex="0">
+      <td class="num">${p.n}</td><td class="mono" style="white-space:nowrap">${esc(p.key)}</td>
+      <td class="ttl"><div style="font-weight:500">${esc(cap(p.title))}</div><div style="color:var(--muted);font-size:12.5px">${esc(holderOf(p))}</div></td>
+      <td class="num">${p.year}</td>
+      <td><span class="pill t-${p.si.tone}">${esc(p.si.label)}</span>${p.mx?`<div style="font-size:12px;margin-top:3px;color:var(--threat)">Presentada en México</div>`:""}</td>
+      <td style="white-space:nowrap"><span class="bar" style="width:${Math.max(2,a*0.6)}px"></span><span class="mono">${a}</span></td>
+      <td class="num">${p.citedBy}</td></tr>
+      ${open?`<tr class="detail"><td colspan="7">${detail(p)}</td></tr>`:""}`;
+  }).join("")||`<tr><td colspan="7" class="empty">Ningún documento coincide con los filtros.</td></tr>`;
+  $("#xb").querySelectorAll("tr.r").forEach(tr=>{
+    const tog=()=>{const n=+tr.dataset.n;X.open=X.open===n?null:n;drawRows();$(`tr.r[data-n="${n}"]`)?.focus({preventScroll:true});};
+    tr.onclick=tog; tr.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog();}};
+  });
+  $("#xb").querySelectorAll(".fam-ask").forEach(b=>b.onclick=e=>{e.stopPropagation();askAbout(b.dataset.f);});
+}
+function cap(t){ return t===t.toUpperCase()? t.charAt(0)+t.slice(1).toLowerCase() : t; }
+function holderOf(p){ const o=p.owners.length?p.owners.map(x=>x.replace(/\s*\(\d{4}-\d{2}-\d{2}\)/,"")):p.applicants; return [...new Set(o)].slice(0,3).join(" · ")||"Sin titular"; }
+function detail(p){
+  const f=p.famObj;
+  return `<div class="det">
+    <div><h4>Resumen</h4><p>${esc(p.abs)||"<i>Lens no trae resumen para este documento.</i>"}</p>
+      <h4 style="margin-top:12px">CPC</h4><div class="cpcs">${p.cpc.slice(0,24).map(c=>`<span>${esc(c)}</span>`).join("")}</div></div>
+    <div>
+      <dl class="kv">
+        <dt>Tipo</dt><dd>${esc(p.type)} (${esc(p.kind)})</dd>
+        <dt>Lens</dt><dd>${esc(p.status)} → <b>${esc(p.si.label)}</b></dd>
+        <dt>Prioridad</dt><dd class="mono">${esc(p.prio||"—")}</dd>
+        <dt>Solicitud</dt><dd class="mono">${esc(p.app||"—")}</dd>
+        <dt>Vence (est.)</dt><dd>${p.exp?p.exp+" <span style='color:var(--muted)'>(solicitud + 20 años)</span>":"No aplica (WO)"}</dd>
+        <dt>Familia</dt><dd class="mono">${esc(p.famJ.join(" · ")||p.j)} (${p.famSize})</dd>
+        <dt>México</dt><dd>${p.mx?"<b style='color:var(--threat)'>Sí hay familia en México</b>":"Sin familia en México: libre para fabricar y vender aquí"}</dd>
+        <dt>Inventores</dt><dd>${esc(p.inventors.slice(0,5).join(", ")||"—")}</dd>
+        ${p.auto.hits.length?`<dt>Coincide con</dt><dd>${esc(p.auto.hits.join(", "))}</dd>`:""}
+      </dl>
+      ${f?`<div class="action" style="margin-top:10px"><b>${esc(f.kind)} · ${esc(f.name)}</b>${esc(f.action)}</div>`:""}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn" href="${esc(p.url)}" target="_blank" rel="noopener">Abrir en Lens.org</a>${f?`<button class="btn fam-ask" data-f="${f.id}">Preguntar al cerebro</button>`:""}</div>
+    </div></div>`;
+}
+function openDoc(n){ X.open=n; X.q=""; X.st=""; X.j=""; X.kind=""; location.hash="explorador"; setTimeout(()=>{ ["#xq","#xst","#xj","#xk"].forEach(s=>{const e=$(s); if(e) e.value="";}); drawRows(); $(`tr.r[data-n="${n}"]`)?.scrollIntoView({block:"center"}); },30); }
+
+/* ---------- mapa de similitud ---------- */
+const STOP=new Set("the and for with from that this which are can may into such than then also more used using use their its has have been being least about between wherein thereof comprising comprises comprise composition compositions method methods present invention provided provides including include other one two each selected group consisting".split(" "));
+let MAPC="kind", GX=null, LAYOUT=null;
+try{ GX=JSON.parse(localStorage.getItem("vt-gx")||"null"); }catch{}
+function tok(p){
+  const w=(p.title+" "+p.title+" "+p.abs).toLowerCase().replace(/[^a-záéíóúñ0-9\- ]/g," ").split(/\s+/).filter(x=>x.length>3&&!STOP.has(x)&&!/^\d+$/.test(x));
+  const c=[...new Set(p.cpc.map(x=>"cpc:"+x.split("/")[0]))], c2=[...new Set(p.cpc.map(x=>"cpc2:"+x))];
+  return [...w,...c,...c,...c,...c2];
+}
+function computeLayout(P){
+  const n=P.length; if(!n) return [];
+  const docs=P.map(tok), df=new Map();
+  docs.forEach(d=>new Set(d).forEach(t=>df.set(t,(df.get(t)||0)+1)));
+  const vec=docs.map(d=>{ const tf=new Map(); d.forEach(t=>tf.set(t,(tf.get(t)||0)+1)); let nn=0; const v=new Map();
+    tf.forEach((f,t)=>{ const x=(1+Math.log(f))*Math.log(1+n/df.get(t)); v.set(t,x); nn+=x*x; }); nn=Math.sqrt(nn)||1; v.forEach((x,t)=>v.set(t,x/nn)); return v; });
+  const D=Array.from({length:n},()=>new Float64Array(n));
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ let s=0; const [a,b]=vec[i].size<vec[j].size?[vec[i],vec[j]]:[vec[j],vec[i]]; a.forEach((x,t)=>{const y=b.get(t); if(y) s+=x*y;}); const d=1-Math.min(1,s); D[i][j]=D[j][i]=d*d; }
+  // MDS clásico: B = -1/2 J D² J, dos vectores propios por iteración de potencia
+  const rm=D.map(r=>r.reduce((a,b)=>a+b,0)/n), gm=rm.reduce((a,b)=>a+b,0)/n;
+  const B=D.map((r,i)=>Array.from(r,(x,j)=>-0.5*(x-rm[i]-rm[j]+gm)));
+  const eig=[];
+  for(let k=0;k<2;k++){
+    let v=Array.from({length:n},(_,i)=>Math.sin(i*1.7+k*2.3)+1.1), lam=0;
+    for(let it=0;it<200;it++){
+      let w=B.map(r=>r.reduce((s,x,j)=>s+x*v[j],0));
+      eig.forEach(([l,u])=>{ const d=w.reduce((s,x,i)=>s+x*u[i],0); w=w.map((x,i)=>x-d*u[i]); });
+      const nr=Math.hypot(...w)||1; lam=nr; v=w.map(x=>x/nr);
+    }
+    eig.push([lam,v]);
+  }
+  // arranque desde MDS y ajuste por fuerzas: atrae a los vecinos más similares, repele al resto
+  const sp=Math.max(1e-9,...eig[0][1].map(Math.abs),...eig[1][1].map(Math.abs));
+  const X0=eig[0][1].map(v=>v/sp), Y0=eig[1][1].map((v,i)=>v/sp+Math.sin(i)*0.01);
+  const sim=(i,j)=>1-Math.sqrt(D[i][j]);
+  const nb=Array.from({length:n},(_,i)=>[...Array(n).keys()].filter(j=>j!==i).sort((a,b)=>sim(i,b)-sim(i,a)).slice(0,Math.min(4,n-1)).filter(j=>sim(i,j)>0.05));
+  const edges=[]; nb.forEach((l,i)=>l.forEach(j=>edges.push([i,j,sim(i,j)])));
+  let xs=X0.slice(), ys=Y0.slice();
+  for(let it=0;it<500;it++){
+    const fx=new Float64Array(n), fy=new Float64Array(n), t=0.06*(1-it/500)+0.004;
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ let dx=xs[i]-xs[j], dy=ys[i]-ys[j], d2=dx*dx+dy*dy+1e-4, f=0.012/d2; fx[i]+=dx*f; fy[i]+=dy*f; fx[j]-=dx*f; fy[j]-=dy*f; }
+    for(const [i,j,w] of edges){ const dx=xs[j]-xs[i], dy=ys[j]-ys[i], d=Math.hypot(dx,dy)||1e-6, target=0.08+(1-w)*0.5, f=(d-target)*0.5*w; fx[i]+=dx/d*f; fy[i]+=dy/d*f; fx[j]-=dx/d*f; fy[j]-=dy/d*f; }
+    for(let i=0;i<n;i++){ fx[i]-=xs[i]*0.02; fy[i]-=ys[i]*0.02; const m=Math.hypot(fx[i],fy[i]); if(m>t){fx[i]*=t/m;fy[i]*=t/m;} xs[i]+=fx[i]; ys[i]+=fy[i]; }
+  }
+  return P.map((p,i)=>({p,x:xs[i],y:ys[i]}));
+}
+function getLayout(){
+  if(GX){ const pts=S.patents.map(p=>{const c=GX.byLens[p.lens]; return c?{p,x:c.x,y:-c.y,cl:c.cluster}:null;}).filter(Boolean); if(pts.length) return pts; }
+  if(!LAYOUT) LAYOUT=computeLayout(S.patents);
+  return LAYOUT;
+}
+const famColor = id => { const i=S.fams.findIndex(f=>f.id===id); return `var(--c${(i%8)+1})`; };
+function ptColor(q){
+  if(MAPC==="st") return `var(--${q.p.si.tone})`;
+  if(MAPC==="fam") return famColor(q.p.fam);
+  if(MAPC==="gx"){ const cl=[...new Set(getLayout().map(z=>z.cl))]; return `var(--c${(cl.indexOf(q.cl)%8)+1})`; }
+  return `var(--${toneOfKind(q.p.famObj?.kind||"Ruido")})`;
+}
+function drawMap(){
+  const box=$("#mapbox"); if(!box) return;
+  const pts=getLayout(), W=800, H=400, pad=36;
+  if(!pts.length){ box.innerHTML=`<div class="empty">Sin documentos para dibujar.</div>`; return; }
+  const xs=pts.map(q=>q.x), ys=pts.map(q=>q.y), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const sx=v=>pad+(v-x0)/((x1-x0)||1)*(W-2*pad), sy=v=>pad+(v-y0)/((y1-y0)||1)*(H-2*pad);
+  const r=q=>4.5+Math.min(9,Math.sqrt(q.p.citedBy)*0.9);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Mapa de similitud de las patentes">`;
+  const order=[...pts].sort((a,b)=>matches(a.p)-matches(b.p)||r(b)-r(a));
+  for(const q of order){ const on=matches(q.p);
+    s+=`<circle class="pt${on?"":" dim"}${X.open===q.p.n?" sel":""}" data-n="${q.p.n}" cx="${sx(q.x).toFixed(1)}" cy="${sy(q.y).toFixed(1)}" r="${r(q).toFixed(1)}" fill="${ptColor(q)}" tabindex="0"><title>${esc(q.p.key+" · "+cap(q.p.title))}</title></circle>`; }
+  if(!GX){
+    const labs=[];
+    for(const f of S.fams){ const m=pts.filter(q=>q.p.fam===f.id); if(!m.length||f.kind==="Ruido") continue;
+      const nm=f.name.length>28?f.name.slice(0,27)+"…":f.name, w=nm.length*6.6;
+      const cx=m.reduce((a,q)=>a+sx(q.x),0)/m.length, top=Math.min(...m.map(q=>sy(q.y)-r(q)))-7;
+      labs.push({nm,w,x:Math.max(w/2+4,Math.min(W-w/2-4,cx)),y:Math.max(14,top)}); }
+    labs.sort((a,b)=>a.y-b.y);
+    for(let i=0;i<labs.length;i++) for(let j=0;j<i;j++){ const a=labs[i], b=labs[j]; if(Math.abs(a.x-b.x)<(a.w+b.w)/2+6 && Math.abs(a.y-b.y)<15) a.y=b.y+15; }
+    for(const l of labs) s+=`<text class="fl" x="${l.x.toFixed(1)}" y="${Math.min(H-6,l.y).toFixed(1)}" text-anchor="middle">${esc(l.nm)}</text>`;
+  }
+  box.innerHTML=s+`</svg><div class="maptip" hidden></div>`;
+  const tip=box.querySelector(".maptip");
+  box.querySelectorAll("circle.pt").forEach(c=>{
+    const p=S.patents.find(z=>z.n===+c.dataset.n);
+    const show=()=>{ const b=box.getBoundingClientRect(), cb=c.getBoundingClientRect();
+      tip.innerHTML=`<b>${esc(p.key)}</b><br>${esc(cap(p.title))}<br><span style="opacity:.8">${esc(p.si.label)} · ${esc(p.famObj?.kind||"")}</span>`;
+      tip.hidden=false; const tx=Math.min(b.width-290,Math.max(4,cb.left-b.left+12)); tip.style.left=tx+"px"; tip.style.top=Math.max(4,cb.top-b.top-tip.offsetHeight-6)+"px"; };
+    c.onmouseenter=show; c.onfocus=show; c.onmouseleave=()=>tip.hidden=true; c.onblur=()=>tip.hidden=true;
+    const pick=()=>{ X.open=p.n; drawRows(); $(`tr.r[data-n="${p.n}"]`)?.scrollIntoView({block:"center",behavior:"smooth"}); };
+    c.onclick=pick; c.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();} };
+  });
+  // leyenda
+  let leg=[];
+  if(MAPC==="st") leg=[...new Map(S.patents.map(p=>[p.si.label,`var(--${p.si.tone})`])).entries()];
+  else if(MAPC==="fam") leg=S.fams.filter(f=>f.items.length).map(f=>[f.name.length>34?f.name.slice(0,33)+"…":f.name,famColor(f.id)]);
+  else if(MAPC==="gx"){ const cl=[...new Set(pts.map(z=>z.cl))]; leg=cl.map((c,i)=>[c||"Sin cluster",`var(--c${(i%8)+1})`]); }
+  else leg=["Oportunidad","Amenaza fuera de México","Señal","Ruido"].map(k=>[k,`var(--${toneOfKind(k)})`]);
+  $("#mapLeg").innerHTML=leg.map(([l,c])=>`<span><i style="background:${c}"></i>${esc(l)}</span>`).join("");
+  const nOn=S.patents.filter(matches).length;
+  $("#mapNote").textContent=(GX?`Disposición importada de Graphext (${pts.length} de ${S.patents.length} documentos con coordenadas). `:`Cada punto es una patente; los cercanos comparten vocabulario en título y resumen y códigos CPC. El tamaño indica cuántas patentes la citan. `)+(nOn<S.patents.length?`Los filtros resaltan ${nOn} de ${S.patents.length}. `:"")+"Haz clic en un punto para abrir su ficha.";
+}
+function initMapControls(){
+  let url=""; try{ url=localStorage.getItem("vt-graphext-url")||""; }catch{}
+  const setUrl=u=>{ const a=$("#gxOpen"); a.hidden=!u; if(u) a.href=u; $("#gxUrl").value=u; };
+  setUrl(url);
+  const syncGx=()=>{ $("#mc").querySelector('option[value="gx"]').disabled=!(GX&&GX.hasCluster); $("#gxClear").hidden=!GX; if(MAPC==="gx"&&!(GX&&GX.hasCluster)){MAPC="kind";$("#mc").value="kind";} };
+  syncGx();
+  $("#mc").onchange=e=>{MAPC=e.target.value;drawMap();};
+  $("#gxCfg").onclick=()=>{ $("#gxPanel").hidden=!$("#gxPanel").hidden; };
+  $("#gxSave").onclick=()=>{ const u=$("#gxUrl").value.trim();
+    if(u && !/^https:\/\//i.test(u)){ toast("El enlace debe empezar con https://"); return; }
+    try{ u?localStorage.setItem("vt-graphext-url",u):localStorage.removeItem("vt-graphext-url"); }catch{}
+    setUrl(u); toast(u?"Enlace de Graphext guardado en este navegador":"Enlace eliminado"); };
+  $("#gxCsv").onchange=async e=>{ const f=e.target.files[0]; if(!f) return;
+    try{ const rows=parseCSV(await f.text()); const h=rows[0].map(x=>x.trim().toLowerCase());
+      const li=h.findIndex(x=>/^lens[ _]?id$/.test(x)), xi=h.findIndex(x=>x==="x"||/^(umap|tsne|graphext)?[ _]?x$/.test(x)), yi=h.findIndex(x=>x==="y"||/^(umap|tsne|graphext)?[ _]?y$/.test(x)), ci=h.findIndex(x=>/cluster/.test(x));
+      if(li<0||xi<0||yi<0) throw new Error("El CSV necesita columnas Lens ID, x e y.");
+      const byLens={}; rows.slice(1).forEach(r=>{ const x=parseFloat(r[xi]), y=parseFloat(r[yi]); if(r[li]&&isFinite(x)&&isFinite(y)) byLens[r[li].trim()]={x,y,cluster:ci>=0?(r[ci]||"").trim():""}; });
+      const hits=S.patents.filter(p=>byLens[p.lens]).length;
+      if(!hits) throw new Error("Ningún Lens ID del CSV coincide con la pesquisa cargada.");
+      GX={byLens,hasCluster:ci>=0}; try{localStorage.setItem("vt-gx",JSON.stringify(GX));}catch{}
+      if(GX.hasCluster){MAPC="gx";$("#mc").value="gx";} syncGx(); drawMap(); toast(`Coordenadas importadas: ${hits} documentos`);
+    }catch(err){ toast(err.message||"No se pudo leer el CSV."); }
+    e.target.value=""; };
+  $("#gxClear").onclick=()=>{ GX=null; try{localStorage.removeItem("vt-gx");}catch{} syncGx(); drawMap(); toast("Volviste al mapa calculado"); };
+}
+
+/* ---------- vista: panorama ---------- */
+function hbars(items, color){
+  const m=Math.max(1,...items.map(i=>i[1]));
+  return `<div class="hbars">${items.map(([l,n,c])=>`<div class="hb"><span class="lab" title="${esc(l)}">${esc(l)}</span><span class="trk"><span class="fill" style="display:block;width:${n/m*100}%;background:${c||color||"var(--accent)"}"></span></span><span class="n">${n}</span></div>`).join("")}</div>`;
+}
+function count(arr){ const m=new Map(); arr.forEach(x=>m.set(x,(m.get(x)||0)+1)); return [...m.entries()].sort((a,b)=>b[1]-a[1]); }
+function yearChart(){
+  const ys=S.patents.map(p=>p.year), y0=Math.min(...ys), y1=Math.max(...ys);
+  const c=count(ys), m=Object.fromEntries(c), mx=Math.max(...c.map(x=>x[1]));
+  const n=y1-y0+1, W=400, H=200, pl=26, pb=24, pt=10, bw=(W-pl-6)/n;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Documentos por año de publicación">`;
+  for(let k=0;k<=mx;k+=Math.max(1,Math.ceil(mx/4))){ const y=H-pb-(k/mx)*(H-pb-pt); s+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-6}" y="${y+4}" font-size="11" text-anchor="end">${k}</text>`; }
+  for(let i=0;i<n;i++){ const yr=y0+i, v=m[yr]||0, h=(v/mx)*(H-pb-pt), x=pl+i*bw+2;
+    if(v) s+=`<rect x="${x}" y="${H-pb-h}" width="${Math.max(2,bw-4)}" height="${h}" rx="2" fill="var(--accent)"><title>${yr}: ${v}</title></rect>`;
+    if(i%Math.ceil(n/9)===0||yr===y1) s+=`<text x="${x+bw/2-2}" y="${H-6}" font-size="11" text-anchor="middle">${yr}</text>`; }
+  return s+"</svg>";
+}
+function renderPan(){
+  const P=S.patents;
+  const st=count(P.map(p=>p.si.label)).map(([l,n])=>[l,n,`var(--${P.find(p=>p.si.label===l).si.tone})`]);
+  const hold=count(P.map(p=>p.famObj?.curated?p.famObj.holder:holderOf(p).split(" · ")[0])).slice(0,8);
+  const famJ=count(S.fams.flatMap(f=>f.jur)).slice(0,12);
+  const sub=count(P.flatMap(p=>[...new Set(p.cpc.map(c=>c.split("/")[0]))])).slice(0,10);
+  const kinds=count(S.fams.map(f=>f.kind)).map(([l,n])=>[l,n,`var(--${toneOfKind(l)})`]);
+  $("#v-panorama").innerHTML=`
+  <div class="row-head"><div><h2>Panorama de la pesquisa</h2><p>Cómo se distribuyen los ${P.length} documentos. Las familias agrupan documentos de la misma invención en distintas oficinas.</p></div></div>
+  <div class="charts">
+    <div class="card"><h3>Documentos por año de publicación</h3><p class="note">Pico 2022: la familia MoMo30 de Morehouse publica en EE. UU., EP y WO.</p>${yearChart()}</div>
+    <div class="card"><h3>Estatus para AHAL</h3><p class="note">Traducción del estatus de Lens según las reglas del cerebro de VT.</p>${hbars(st)}</div>
+    <div class="card"><h3>Titulares con más documentos</h3><p class="note">Titular actual (owner) o solicitante.</p>${hbars(hold)}</div>
+    <div class="card"><h3>Países donde se presentaron las familias</h3><p class="note">Número de familias con presencia en cada oficina. México no aparece.</p>${hbars(famJ)}</div>
+    <div class="card"><h3>Grupos CPC más frecuentes</h3><p class="note">A61K8 y A61Q son los grupos cosméticos que interesan a AHAL.</p>${hbars(sub.map(([l,n])=>[l,n,/^A61(K8|Q)/.test(l)?"var(--opp)":"var(--accent)"]))}</div>
+    <div class="card"><h3>Familias por tipo de hallazgo</h3><p class="note">Oportunidad, amenaza, señal o ruido para AHAL.</p>${hbars(kinds)}</div>
+  </div>`;
+}
+
+/* ---------- vista: calidad ---------- */
+function renderCal(){
+  const ings=DATA.ahal.ingredients, P=S.patents;
+  const cov=ings.map(i=>{ const key=Object.keys(ING).find(k=>k.split(" ")[0]===i.name.split(" ")[0])||i.name; const ws=ING[key]||[]; const n=P.filter(p=>ws.some(w=>(p.title+" "+p.abs).toLowerCase().includes(w))).length; return {...i,n}; });
+  const lensQ=q=>`https://www.lens.org/lens/search/patent/list?q=${encodeURIComponent(q)}`;
+  const junk=S.source.junk||[];
+  $("#v-calidad").innerHTML=`
+  <div class="row-head"><div><h2>Calidad de la pesquisa</h2><p>Qué tan bien cubre esta query el catálogo de AHAL y qué conviene corregir antes de la siguiente versión.</p></div></div>
+  <ul class="issues">
+    <li><span class="pill t-threat">Cobertura</span><div><h3>La query casi no toca el catálogo</h3><p>${cov.filter(c=>c.n===0).length} de ${cov.length} ingredientes no aparecen en ningún título ni resumen. Lo que sí aparece es farmacia (antivirales), dispositivos, alimentos y tabaco.</p></div></li>
+    <li><span class="pill t-signal">Estatus</span><div><h3>"PENDING" en una WO no significa protección</h3><p>La fase internacional PCT dura 30 meses desde la prioridad. Las WO de este registro ya la cerraron; la protección depende de las fases nacionales (US, EP, CN…). Aquí se marcan como "WO · fase internacional concluida".</p></div></li>
+    <li><span class="pill t-signal">Datos</span><div><h3>Faltan reivindicaciones y fecha oficial de expiración</h3><p>El CSV de Lens no trae claims, así que el chat no puede opinar sobre infracción. La expiración aquí es estimada (solicitud + 20 años). Confirma en el IMPI o con un agente de patentes antes de decidir.</p></div></li>
+    ${junk.map(j=>`<li><span class="pill t-noise">Fila ${j.row}</span><div><h3>Fila sin datos de patente</h3><p>La fila ${j.row} del CSV no tiene número ni campos y contiene un texto ajeno ("${esc(j.text)}"). Se excluyó del análisis.</p></div></li>`).join("")}
+  </ul>
+  <div class="card"><h3>Cobertura por ingrediente del catálogo</h3><p class="note">Documentos de esta pesquisa que mencionan el ingrediente, y la cadena sugerida en tu Excel para buscarlo en Lens.</p>
+    <div class="tbl-wrap"><table class="cov"><thead><tr><th>Ingrediente</th><th>Producto AHAL</th><th>Docs</th><th>Cadena para patentes</th><th></th></tr></thead><tbody>
+    ${cov.map(c=>`<tr><td><b>${esc(c.name)}</b><div style="font-size:12px;color:var(--muted);font-style:italic">${esc(c.sci)}</div></td><td>${esc(c.products)}</td><td class="num">${c.n}</td><td class="q">${esc(c.qpat)}</td><td><a class="btn" href="${lensQ(c.qpat)}" target="_blank" rel="noopener">Buscar en Lens</a></td></tr>`).join("")}
+    </tbody></table></div></div>
+  <div class="card"><h3>Query sugerida para vigilancia-2</h3><p class="note">Combina los cinco ingredientes de prioridad alta con los grupos cosméticos A61K8 y A61Q, y excluye tabaco y alimentos. Pégala en Lens, exporta el CSV y cárgalo aquí con el botón de arriba.</p>
+<pre class="query">("Mimosa tenuiflora" OR tepezcohuite OR "Tagetes erecta" OR "Opuntia ficus-indica" OR "prickly pear" OR Melipona OR "stingless bee honey" OR "Diospyros digyna" OR "Diospyros nigra" OR "black sapote" OR bakuchiol)
+AND (cosmetic OR skin OR topical)
+AND class_cpc.symbol:(A61K8* OR A61Q*)
+NOT class_cpc.symbol:(A24* OR A23*)</pre>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="copyQ">Copiar query</button><a class="btn" href="https://www.lens.org/lens/search/patent/structured" target="_blank" rel="noopener">Abrir Lens.org</a></div>
+    <p class="note" style="margin-top:8px">La sintaxis de campos CPC de Lens puede variar; si la búsqueda falla, quita las dos últimas líneas y filtra por CPC en el panel lateral de Lens.</p></div>`;
+  $("#copyQ").onclick=()=>copy($("pre.query").textContent,"Query copiada");
+}
+
+/* ---------- banco de preguntas ---------- */
+function renderBank(filter=""){
+  const f=filter.toLowerCase();
+  $("#bankL").innerHTML=DATA.bank.map((b,bi)=>{
+    const qs=b.qs.filter(q=>!f||q.q.toLowerCase().includes(f));
+    if(!qs.length) return "";
+    const si=b.qs.filter(q=>q.a==="si").length;
+    let lastSub=null;
+    return `<details class="blk" ${f||bi===5||bi===9?"open":""}><summary>${esc(b.title)}<span class="c">${si?si+"/":""}${b.qs.length}</span></summary>
+      ${qs.map(q=>{ const h=q.sub&&q.sub!==lastSub?`<div class="sub">${esc(q.sub)}</div>`:""; lastSub=q.sub;
+        return h+`<button class="qb" data-q="${esc(q.q)}" data-n="${esc(q.n)}"><span class="qn"><i class="dot d-${q.a}"></i>${esc(q.n)}</span><span>${esc(q.q)}</span></button>`; }).join("")}
+    </details>`;
+  }).join("")||`<div class="empty">Ninguna pregunta coincide.</div>`;
+  $("#bankL").querySelectorAll(".qb").forEach(b=>b.onclick=()=>{ $("#qIn").value=b.dataset.q; $("#qIn").focus(); });
+}
+
+/* ---------- contexto del cerebro ---------- */
+const PLANTILLA="Responde solo con la información cargada. Para cada afirmación cita la hoja, la fila y la fuente (link, número de patente o DOI). Clasifica cada hallazgo como oportunidad o amenaza, con impacto alto, medio o bajo, y propone una acción concreta para AHAL. Si falta información, dilo y sugiere qué buscar.";
+function buildContext(){
+  const A=DATA.ahal;
+  const pats=S.patents.map(p=>[
+    `#${p.n} | ${p.key} | oficina ${p.j} | ${p.type} | Lens: ${p.status} → ${p.si.label} | México: ${p.mx?"SÍ hay familia":"sin familia en MX"}`,
+    `  prioridad ${p.prio||"?"} · solicitud ${p.app||"?"} · publicación ${p.pub||"?"} · vence(est.) ${p.exp||"n/a"}`,
+    `  titular: ${holderOf(p)} | inventores: ${p.inventors.slice(0,6).join(", ")}`,
+    `  familia (${p.famSize}): ${p.famJ.join(",")} | citada por ${p.citedBy} patentes | citas a literatura: ${p.npl}`,
+    `  CPC: ${p.cpc.slice(0,14).join(", ")}`,
+    `  título: ${p.title}`,
+    `  resumen: ${p.abs||"(sin resumen)"}`,
+    `  fuente: ${p.url} | familia analizada: ${p.fam}`
+  ].join("\n")).join("\n");
+  const fams=S.fams.map(f=>`${f.id} · ${f.name} (${f.kind}, relevancia ${f.rel}, afinidad ${f.score}/100${f.curated?"":", lectura automática"})\n  titular: ${f.holder}\n  documentos: ${f.items.map(p=>"#"+p.n+" "+p.key).join("; ")}\n  tecnología: ${f.tech}\n  estatus: ${f.status}\n  líneas AHAL: ${(f.lines||[]).join("; ")||"—"}\n  acción propuesta (hipótesis): ${f.action}`).join("\n");
+  const ing=A.ingredients.map(i=>`- ${i.name} (${i.sci}) → ${i.products}; activos: ${i.actives}; prioridad ${i.prio}`).join("\n");
+  const tec=A.tech.map(t=>`- ${t.name}: ${t.why}`).join("\n");
+  const cpc=A.cpc.map(c=>`- ${c.code}: ${c.covers} (${c.products})`).join("\n");
+  return `Eres el "cerebro digital" de vigilancia tecnológica de AHAL, marca mexicana de cosmética natural basada en herbolaria mexicana y ciencia. Respondes en español, claro y directo, para la persona responsable de VT (académica de la UAEH).
+
+REGLAS
+1. Usa SOLO la información cargada abajo. Si una pregunta necesita datos que no están (competidores, matriz de evaluación, bitácora, fuentes regulatorias, artículos científicos, precios, reseñas), dilo explícitamente, responde lo que sí se pueda desde las patentes y sugiere qué buscar y dónde (Lens, Google Patents, IMPI/SIGA, PubMed, Scholar, COFEPRIS, etc.).
+2. En patentes, cita siempre número, oficina y estatus legal; nunca digas "hay patentes sobre…" sin la lista. Cita como [#n NÚMERO].
+3. Interpreta el estatus así: concedida y vigente = amenaza (solo en el país donde se concedió); solicitud en trámite = señal temprana; expirada, caducada o abandonada = oportunidad, tecnología libre. Una WO no da protección por sí misma; su fase internacional dura 30 meses desde la prioridad.
+4. Territorialidad: una patente sin familia en México no impide fabricar ni vender en México; sí importa si AHAL exporta a ese país.
+5. El estatus de Lens es una estimación y la expiración aquí es estimada (solicitud + 20 años). El CSV no trae reivindicaciones: no afirmes infracción; recomienda confirmar en IMPI y con agente de patentes (libertad de operación es opinión legal).
+6. Las acciones que propongas son hipótesis que deben validarse con la fuente original.
+7. Formato: respuestas escaneables con viñetas o una tabla corta en Markdown; termina con "Siguiente paso" cuando aplique.
+
+CATÁLOGO E INGREDIENTES DE AHAL (hoja "Vigilancia tecnológica" del Excel CASO_AHAL_vt)
+${ing}
+Tecnologías de formulación de interés:
+${tec}
+Códigos CPC de interés:
+${cpc}
+
+DATOS NO CARGADOS TODAVÍA: hojas Competidores, Matriz de evaluación, Fuentes de vigilancia, Bitácora de vigilancia (Benchmarking_competidores_AHAL.xlsx), y la hoja "Registro patentes y ciencia" está vacía (solo una fila de ejemplo). No hay artículos científicos ni DOIs cargados.
+
+PESQUISA DE PATENTES: ${S.source.file} (exportación de ${S.source.base}, ${S.patents.length} documentos, fecha de análisis ${S.source.loaded}).
+${(S.source.junk||[]).map(j=>`Nota: la fila ${j.row} del CSV no era una patente (texto ajeno) y se excluyó.`).join("")}
+Diagnóstico: casi ningún documento menciona ingredientes del catálogo; ninguna familia tiene miembros en México.
+
+FAMILIAS Y LECTURA PARA AHAL
+${fams}
+
+REGISTROS
+${pats}`;
+}
+
+/* ---------- chat ---------- */
+let sample=null, turns=[], ctl=null, busy=false;
+function md(src){
+  const lines=esc(src).split("\n"); let out=[], list=null, tbl=[];
+  const inline=s=>s.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<i>$2</i>").replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s)<]+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  const flushL=()=>{ if(list){ out.push(`<${list.t}>${list.items.map(i=>`<li>${inline(i)}</li>`).join("")}</${list.t}>`); list=null; } };
+  const flushT=()=>{ if(tbl.length){ const rows=tbl.filter(r=>!/^\|?\s*:?-{2,}/.test(r)).map(r=>r.replace(/^\||\|$/g,"").split("|").map(c=>c.trim()));
+      out.push(`<div class="tw"><table><thead><tr>${rows[0].map(c=>`<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map(r=>`<tr>${r.map(c=>`<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`); tbl=[]; } };
+  for(const l of lines){
+    if(/^\s*\|.*\|\s*$/.test(l)){ flushL(); tbl.push(l.trim()); continue; } else flushT();
+    let m;
+    if((m=l.match(/^#{1,4}\s+(.*)/))){ flushL(); out.push(`<h3>${inline(m[1])}</h3>`); }
+    else if((m=l.match(/^\s*[-*•]\s+(.*)/))){ if(!list||list.t!=="ul"){flushL(); list={t:"ul",items:[]};} list.items.push(m[1]); }
+    else if((m=l.match(/^\s*\d+[.)]\s+(.*)/))){ if(!list||list.t!=="ol"){flushL(); list={t:"ol",items:[]};} list.items.push(m[1]); }
+    else if(!l.trim()){ flushL(); }
+    else { flushL(); out.push(`<p>${inline(l)}</p>`); }
+  }
+  flushL(); flushT(); return out.join("");
+}
+function welcome(){
+  $("#msgs").innerHTML=`<div class="welcome"><h3>Pregúntale a tu pesquisa</h3>
+  <p>El cerebro conoce los ${S.patents.length} documentos de ${esc(S.source.file)}, la lectura de cada familia y el catálogo de AHAL del Excel. Elige una pregunta del banco (los puntos verdes se responden con esta pesquisa) o escribe la tuya.</p>
+  <div class="starter">${["¿Qué patentes relevantes están libres y qué tecnología permiten usar hoy?","¿Qué patentes vigentes en EE. UU. o Europa afectarían si AHAL exporta?","¿Qué ingredientes del catálogo casi no tienen patentes y son espacios libres para innovar?","¿Qué métodos de extracción o conservación patentados resolverían un problema técnico de AHAL?"].map(q=>`<button class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div></div>`;
+  $("#msgs").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ $("#qIn").value=b.dataset.q; send(); });
+}
+function addMsg(role, html){ const d=document.createElement("div"); d.className="msg "+role; d.innerHTML=html; $("#msgs").appendChild(d); $("#msgs").scrollTop=1e9; return d; }
+function fullQuestion(q){ return $("#tpl").checked ? q+"\n\n"+PLANTILLA : q; }
+async function send(){
+  const q=$("#qIn").value.trim(); if(!q||busy) return;
+  if(!sample){ $("#noSample").hidden=false; toast("El chat no está disponible en esta vista. Usa 'Copiar con contexto'."); return; }
+  if($(".welcome")) $("#msgs").innerHTML="";
+  addMsg("u", esc(q));
+  $("#qIn").value="";
+  const box=addMsg("a",`<div class="md thinking">Pensando…</div>`), mdEl=box.querySelector(".md");
+  turns.push({role:"user",content:fullQuestion(q)});
+  const hist=turns.slice(-9); while(hist.length && hist[0].role!=="user") hist.shift();
+  busy=true; ctl=new AbortController(); $("#sendBtn").disabled=true; $("#stopBtn").hidden=false;
+  try{
+    const {text,truncated}=await sample([{role:"user",content:buildContext()+"\n\nA continuación vienen las preguntas. Respóndelas siguiendo las reglas."},...hist],
+      {cache:false, signal:ctl.signal, onText:({text})=>{ mdEl.classList.remove("thinking"); mdEl.innerHTML=md(text); $("#msgs").scrollTop=1e9; }});
+    mdEl.innerHTML=md(text);
+    turns.push({role:"assistant",content:text});
+    if(truncated) box.insertAdjacentHTML("beforeend",`<div class="meta">La respuesta se cortó por longitud. Pide una parte más específica.</div>`);
+  }catch(e){
+    const keep=e?.text; mdEl.classList.remove("thinking");
+    if(keep && e.code!=="refused"){ mdEl.innerHTML=md(keep); turns.push({role:"assistant",content:keep}); } else { mdEl.innerHTML=""; turns.pop(); }
+    const msg={cancelled:"Detenido.",not_granted:"No se dio permiso para usar Claude en esta página. Puedes copiar la pregunta con contexto.",sampling_disabled:"Claude no está disponible para esta cuenta.",rate_limited:"Demasiadas preguntas seguidas o límite de uso alcanzado. Intenta en unos minutos.",session_expired:"Tu sesión expiró; vuelve a iniciar sesión.",prompt_too_large:"La pesquisa es demasiado grande para enviarla completa. Filtra o carga un CSV más pequeño.",refused:"Claude no respondió esta pregunta. Reformúlala."}[e?.code]||"Se interrumpió la conexión. Vuelve a enviar la pregunta.";
+    box.insertAdjacentHTML("beforeend",`<div class="meta">${esc(msg)}</div>`);
+    if(e?.code==="not_granted"||e?.code==="sampling_disabled"){ sample=null; $("#noSample").hidden=false; }
+  }finally{ busy=false; $("#sendBtn").disabled=false; $("#stopBtn").hidden=true; }
+}
+function askAbout(fid){
+  const f=S.fams.find(x=>x.id===fid); if(!f) return;
+  location.hash="cerebro";
+  $("#qIn").value=`Analiza la familia ${f.id} (${f.name}): ¿qué tecnología protege exactamente, en qué países y con qué estatus, qué producto o línea de AHAL podría aprovecharla o se vería afectada, y qué pasos concretos recomiendas para validarla?`;
+  setTimeout(()=>$("#qIn").focus(),50);
+}
+async function copy(text,ok){
+  try{ await navigator.clipboard.writeText(text); toast(ok); }
+  catch{ const t=document.createElement("textarea"); t.value=text; document.body.appendChild(t); t.select(); try{document.execCommand("copy"); toast(ok);}catch{toast("No se pudo copiar; selecciona el texto manualmente.");} t.remove(); }
+}
+function toast(m){ const d=document.createElement("div"); d.className="toast"; d.textContent=m; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
+
+/* ---------- CSV de Lens ---------- */
+function parseCSV(txt){
+  txt=txt.replace(/^﻿/,""); const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<txt.length;i++){ const c=txt[i];
+    if(q){ if(c==='"'){ if(txt[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c==='"') q=true; else if(c===','){row.push(f);f="";} else if(c==='\n'){row.push(f);rows.push(row);row=[];f="";} else if(c!=='\r') f+=c; }
+  if(f||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+function fromLens(txt, name){
+  const rows=parseCSV(txt); const h=rows[0]; const ix=k=>h.indexOf(k);
+  if(ix("Lens ID")<0||ix("Title")<0) throw new Error("No parece una exportación de Lens.org (faltan columnas 'Lens ID' o 'Title').");
+  const g=(r,k)=>{const i=ix(k); return i<0?"":(r[i]||"").trim();};
+  const sp=v=>v?v.split(";;").map(x=>x.trim()).filter(Boolean):[];
+  const dt=v=>{ if(!v) return null; const m=v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:v.slice(0,10); };
+  const junk=[]; const pats=[];
+  rows.slice(1).forEach((r,i)=>{ if(r.length<5) return; if(!g(r,"Lens ID")){ if(g(r,"Title")) junk.push({row:i+1,text:g(r,"Title").slice(0,80)}); return; }
+    pats.push({n:+g(r,"#")||i+1,key:g(r,"Display Key"),j:g(r,"Jurisdiction"),kind:g(r,"Kind"),lens:g(r,"Lens ID"),url:g(r,"URL")||("https://lens.org/"+g(r,"Lens ID")),
+      pub:dt(g(r,"Publication Date")),year:+g(r,"Publication Year")||0,app:dt(g(r,"Application Date")),prio:dt(g(r,"Earliest Priority Date")),
+      title:g(r,"Title"),abs:g(r,"Abstract"),applicants:sp(g(r,"Applicants")),inventors:sp(g(r,"Inventors")),owners:sp(g(r,"Owners")),
+      type:g(r,"Document Type"),status:g(r,"Legal Status"),citedBy:+g(r,"Cited by Patent Count")||0,cites:+g(r,"Cites Patent Count")||0,
+      famSize:+g(r,"Simple Family Size")||0,famJ:sp(g(r,"Simple Family Member Jurisdictions")),famIds:sp(g(r,"Simple Family Members")),
+      cpc:[...new Set(sp(g(r,"CPC Classifications")))],npl:+g(r,"NPL Citation Count")||0}); });
+  if(!pats.length) throw new Error("El archivo no tiene filas de patentes.");
+  // agrupar en familias por miembros compartidos
+  const parent={}; const find=x=>parent[x]===x?x:(parent[x]=find(parent[x])); const uni=(a,b)=>{parent[find(a)]=find(b);};
+  pats.forEach(p=>{ parent[p.lens]??=p.lens; p.famIds.forEach(id=>{parent[id]??=id; uni(p.lens,id);}); });
+  const known=Object.fromEntries(DATA.patents.map(p=>[p.lens,p.fam]));
+  const groups={}; pats.forEach(p=>{ (groups[find(p.lens)]??=[]).push(p); });
+  const fams=[]; let k=1;
+  for(const items of Object.values(groups)){
+    const kn=items.map(p=>known[p.lens]).find(Boolean);
+    const base=kn && DATA.families.find(f=>f.id===kn);
+    const id=base?base.id:"A"+String(k++).padStart(2,"0");
+    items.forEach(p=>p.fam=id);
+    if(base){ if(!fams.some(f=>f.id===base.id)) fams.push({...base,curated:true}); continue; }
+    items.forEach(p=>{p.si=situ(p); p.auto=autoScore(p);});
+    const best=items.reduce((a,b)=>a.auto.score>=b.auto.score?a:b), sc=best.auto.score;
+    const vig=items.some(p=>p.si.code==="vig"), libre=items.every(p=>p.si.code==="libre"||p.si.code==="wo");
+    const kind=sc<25?"Ruido":vig?(items.some(inMX)?"Amenaza":"Amenaza fuera de México"):libre?"Oportunidad":"Señal";
+    fams.push({id,name:cap(best.title),holder:holderOf(best),score:sc,kind,rel:sc>=60?"Alta":sc>=40?"Media":sc>=25?"Baja":"Nula",
+      tech:(best.abs||"").slice(0,260)+((best.abs||"").length>260?"…":""),lines:best.auto.hits,
+      status:`${items.length} documento(s): `+[...new Set(items.map(p=>p.si.label))].join(", ")+(items.some(inMX)?". Con familia en México.":". Sin familia en México."),
+      action: kind==="Oportunidad"?"Revisar el texto completo y las reivindicaciones en Lens para ver qué parte es aprovechable.":kind.startsWith("Amenaza")?"Leer reivindicaciones y comparar con fórmulas AHAL; consultar a un agente antes de exportar.":kind==="Señal"?"Vigilar la evolución de la solicitud cada trimestre.":"Descartar o ajustar la query.",curated:false});
+  }
+  return {patents:pats,fams,source:{file:name,base:"Lens.org",rows:pats.length,loaded:new Date().toISOString().slice(0,10),junk}};
+}
+$("#csvIn").onchange=async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  try{ const txt=await file.text(); const r=fromLens(txt,file.name);
+    S.patents=r.patents; S.fams=r.fams; S.source=r.source; S.custom=true; turns=[]; X.open=null; famFilter="Todas";
+    try{ localStorage.setItem("vt-csv",JSON.stringify({name:file.name,txt})); }catch{}
+    finalize(); welcome(); toast(`Cargado: ${r.patents.length} documentos de ${file.name}`);
+  }catch(err){ toast(err.message||"No se pudo leer el archivo."); }
+  e.target.value="";
+};
+$("#resetBtn").onclick=()=>{ try{localStorage.removeItem("vt-csv");}catch{} turns=[]; X.open=null; loadBase(); welcome(); toast("Volviste a vigilancia-1"); };
+
+/* ---------- navegación ---------- */
+const VIEWS=["oportunidades","explorador","panorama","calidad","cerebro"];
+function route(){
+  const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):"oportunidades";
+  VIEWS.forEach(x=>{ $("#v-"+x).hidden=x!==v; });
+  document.querySelectorAll("nav.tabs a").forEach(a=>{ if(a.dataset.v===v) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  window.scrollTo(0,0);
+}
+function renderAll(){
+  renderOpp(); renderExp(); renderPan(); renderCal();
+  $("#ctxInfo").textContent=`Conoce ${S.patents.length} documentos de ${S.source.file} y el catálogo AHAL`;
+}
+window.addEventListener("hashchange",route);
+$("#bankQ").oninput=e=>renderBank(e.target.value);
+$("#composer").onsubmit=e=>{e.preventDefault();send();};
+$("#qIn").onkeydown=e=>{ if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); send(); } };
+$("#stopBtn").onclick=()=>ctl?.abort();
+$("#clearChat").onclick=()=>{ ctl?.abort(); turns=[]; welcome(); };
+$("#copyCtx").onclick=()=>{ const q=$("#qIn").value.trim()||"(escribe aquí tu pregunta)"; copy(buildContext()+"\n\nPREGUNTA:\n"+fullQuestion(q),"Pregunta y contexto copiados"); };
+
+/* ---------- arranque ---------- */
+(function boot(){
+  let restored=false;
+  try{ const s=JSON.parse(localStorage.getItem("vt-csv")||"null"); if(s){ const r=fromLens(s.txt,s.name); S.patents=r.patents;S.fams=r.fams;S.source=r.source;S.custom=true; finalize(); restored=true; } }catch{}
+  if(!restored) loadBase();
+  renderBank(); welcome(); route();
+  if(window.claude?.use){ claude.use("sample").then(fn=>{ sample=fn; if(!fn) $("#noSample").hidden=false; }).catch(()=>{ $("#noSample").hidden=false; }); }
+  else $("#noSample").hidden=false;
+})();
+</script>
+
+</body></html>
